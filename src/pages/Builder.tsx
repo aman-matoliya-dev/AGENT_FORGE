@@ -20,7 +20,7 @@ import ArchitectureDiagram from '../components/ArchitectureDiagram';
 import { Code, CopyBtn, FitBadge, GhostBtn, PrimaryBtn, Tip } from '../components/ui';
 import { Magnetic, slideVariants, Stagger, StaggerItem, Tilt } from '../components/motion';
 import { cn } from '../utils/cn';
-import { runAgent } from '../utils/api';
+import { runAgent, type KnowledgeSource } from '../utils/api';
 
 const STEPS = [
   { id: 'identity', label: 'Identity', icon: User },
@@ -77,6 +77,7 @@ export default function Builder() {
   const [testError, setTestError] = useState('');
   const [conversationId, setConversationId] = useState<string>();
   const [testMetadata, setTestMetadata] = useState('');
+  const [testSources, setTestSources] = useState<KnowledgeSource[]>([]);
 
   const set = (patch: Partial<typeof cfg>) => setCfg((c) => ({ ...c, ...patch }));
   const sysPrompt = useMemo(() => buildSystemPrompt({ ...cfg, id: 'x', createdAt: 0 }), [cfg]);
@@ -116,6 +117,7 @@ export default function Builder() {
     setTestError('');
     setConversationId(undefined);
     setTestMetadata('');
+    setTestSources([]);
     setTestMetadata('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -163,8 +165,9 @@ export default function Builder() {
 
       setTestResponse(result.response);
       setConversationId(result.conversationId);
+      setTestSources(result.sources ?? []);
       setTestMetadata(result.metadata
-        ? `${result.metadata.provider} · ${result.metadata.model} · memory: ${result.metadata.memory} · tools: ${result.metadata.toolsUsed.join(', ') || 'none'}`
+        ? `${result.metadata.provider} · ${result.metadata.model} · memory: ${result.metadata.memory} · knowledge: ${result.metadata.knowledgeUsed ? 'used' : 'not used'} · tools: ${result.metadata.toolsUsed.join(', ') || 'none'}`
         : '');
     } catch (error) {
       setTestError(
@@ -289,6 +292,18 @@ export default function Builder() {
               {testMetadata && (
                 <div className="mt-3 text-xs text-slate-500">
                   {testMetadata} · conversation: {conversationId}
+                </div>
+              )}
+              {testSources.length > 0 && (
+                <div className="mt-4 border-t border-cyan-400/10 pt-4">
+                  <div className="text-xs font-bold uppercase tracking-widest text-cyan-300">Knowledge sources</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {testSources.map((source) => (
+                      <span key={`${source.documentId}-${source.chunkId}`} className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-slate-300">
+                        {source.filename} · page {source.page ?? 1}{typeof source.score === 'number' ? ` · ${source.score.toFixed(3)}` : ''}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -618,20 +633,20 @@ export default function Builder() {
             <StepShell title="Knowledge base (RAG)?" sub="Should it answer from YOUR documents?"
               why="Why this matters: a model only knows its training data — never your notes, docs, or codebase. RAG retrieves relevant passages from your files and injects them into the prompt, turning guesses into grounded answers with sources. Enable it if your purpose mentions ‘my documents / notes / codebase’.">
               <div className="grid gap-3 sm:grid-cols-2">
-                {([['none', 'No knowledge base', 'Answers purely from the model\'s training. Simplest start.', MessageSquareText], ['rag', 'RAG over my files', 'Drop .txt/.md files into ./knowledge — the agent searches them before answering.', BookOpen]] as const).map(([v, t, d, Icon]) => (
+                {([['none', 'No knowledge base', 'Answers purely from the model\'s training. Simplest start.', MessageSquareText], ['rag', 'RAG over my files', 'Uploaded .txt/.pdf documents are indexed with embeddings; relevant passages are retrieved from the local vector store and supplied to the agent with source metadata.', BookOpen]] as const).map(([v, t, d, Icon]) => (
                   <button key={v} onClick={() => set({ knowledge: v })}
                     className={cn('flex items-start gap-4 rounded-2xl border p-5 text-left transition-all', cfg.knowledge === v ? 'border-emerald-400/50 bg-emerald-400/[0.06]' : 'border-white/10 bg-white/[0.02] hover:border-white/20')}>
                     <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-xl border', cfg.knowledge === v ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/10 bg-white/[0.03]')}>
                       <Icon className={cn('h-5 w-5', cfg.knowledge === v ? 'text-emerald-300' : 'text-slate-400')} />
                     </span>
-                    <span><span className="flex items-center gap-2 font-display text-sm font-bold text-white">{t}{v === 'rag' && <span className="text-[10px] font-normal uppercase tracking-wider text-amber-300">Unavailable in Phase 2</span>}{cfg.knowledge === v && <Check className="h-4 w-4 text-emerald-400" />}</span>
+                    <span><span className="flex items-center gap-2 font-display text-sm font-bold text-white">{t}{cfg.knowledge === v && <Check className="h-4 w-4 text-emerald-400" />}</span>
                     <span className="mt-1 block text-xs leading-relaxed text-slate-400">{d}</span></span>
                   </button>
                 ))}
               </div>
               {cfg.knowledge === 'rag' && (
                 <p className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 text-xs text-slate-400">
-                  Your generated project includes a zero-dependency mini-RAG (keyword retrieval) so it runs anywhere — plus comments showing exactly where to upgrade to embeddings + a vector DB like Chroma later.
+                  The AGENT_FORGE backend indexes uploaded .txt/.pdf documents with embeddings, retrieves relevant passages from its local vector store, and supplies the agent with bounded context and source metadata.
                 </p>
               )}
             </StepShell>

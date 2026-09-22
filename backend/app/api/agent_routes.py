@@ -101,7 +101,9 @@ def run_agent(
             config=request.config.model_dump(by_alias=True),
         )
 
-        result, tools_used, unavailable = agent.run_with_metadata(request.message, conversation_id)
+        result, tools_used, unavailable, knowledge_sources, knowledge_error = agent.run_with_metadata(
+            request.message, conversation_id
+        )
 
         for tool_name in tools_used:
             db.log_tool(conversation_id, tool_name, "used")
@@ -122,7 +124,10 @@ def run_agent(
                 "conversationId": conversation_id,
                 "toolsUsed": tools_used,
                 "memory": request.config.memory,
-                "knowledge": "unavailable",
+                "knowledge": request.config.knowledge,
+                "knowledgeUsed": bool(knowledge_sources),
+                "sources": knowledge_sources,
+                **({"knowledgeError": "Knowledge retrieval was unavailable."} if knowledge_error else {}),
                 "agentType": request.config.agent_type,
             },
             "provider": request.config.provider,
@@ -130,6 +135,9 @@ def run_agent(
             "conversationId": conversation_id,
             "toolsUsed": tools_used,
             "memory": request.config.memory,
+            "knowledge": request.config.knowledge,
+            "knowledgeUsed": bool(knowledge_sources),
+            "sources": knowledge_sources,
         }
 
     except ValueError as error:

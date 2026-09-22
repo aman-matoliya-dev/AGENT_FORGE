@@ -113,8 +113,22 @@ export interface AgentResponse {
     toolsUsed: string[];
     memory: string;
     knowledge: string;
+    knowledgeUsed: boolean;
+    sources: KnowledgeSource[];
+    knowledgeError?: string;
     agentType: string;
   };
+  knowledge?: "none" | "rag";
+  knowledgeUsed?: boolean;
+  sources?: KnowledgeSource[];
+}
+
+export interface KnowledgeSource {
+  documentId?: string;
+  chunkId?: string;
+  filename: string;
+  page?: number;
+  score?: number;
 }
 
 export interface KnowledgeDocument {

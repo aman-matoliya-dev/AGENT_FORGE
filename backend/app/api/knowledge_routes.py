@@ -1,12 +1,9 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.models.knowledge_models import KnowledgeSearchRequest
-from app.services.knowledge import KnowledgeService
+from app.services.knowledge import knowledge_service
 
 router = APIRouter(prefix="/api/knowledge", tags=["Knowledge"])
-knowledge_service = KnowledgeService()
-
-
 @router.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
     if not file.filename:
