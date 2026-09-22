@@ -10,6 +10,8 @@ from app.services.embedding_service import embed_texts
 from app.services.vector_store import LocalVectorStore
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_RETRIEVAL_CHARS = 6000
+MIN_RELEVANCE_SCORE = 0.35
 ALLOWED_EXTENSIONS = {".txt", ".pdf"}
 ALLOWED_CONTENT_TYPES = {
     ".txt": {"text/plain", "text/plain; charset=utf-8", "application/octet-stream"},
@@ -115,6 +117,37 @@ class KnowledgeService:
             "results": results,
         }
 
+    def retrieve_context(self, query: str, top_k: int = 5) -> dict:
+        """Return only sufficiently relevant, bounded context for agent prompts."""
+        results = self.search(query, top_k=min(max(top_k, 1), 5))["results"]
+        relevant = [result for result in results if result["score"] >= MIN_RELEVANCE_SCORE]
+        context_parts: list[str] = []
+        sources: list[dict] = []
+        remaining = MAX_RETRIEVAL_CHARS
+
+        for result in relevant:
+            text = str(result.get("text") or "").strip()
+            if not text or remaining <= 0:
+                continue
+            excerpt = text[:remaining]
+            context_parts.append(
+                f"[Source: {result.get('filename', 'uploaded document')}, "
+                f"page {result.get('page') or 1}]\n{excerpt}"
+            )
+            sources.append({
+                "documentId": result.get("documentId"),
+                "chunkId": result.get("chunkId"),
+                "filename": result.get("filename"),
+                "page": result.get("page"),
+                "score": result.get("score"),
+            })
+            remaining -= len(excerpt)
+
+        return {
+            "context": "\n\n---\n\n".join(context_parts),
+            "sources": sources,
+        }
+
     def delete_document(self, document_id: str) -> dict:
         removed = self.vector_store.delete_document(document_id)
         if not removed:
@@ -126,3 +159,6 @@ class KnowledgeService:
             "success": True,
             **self.vector_store.status(),
         }
+
+
+knowledge_service = KnowledgeService()
