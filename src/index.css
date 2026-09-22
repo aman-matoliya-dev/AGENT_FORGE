@@ -1,0 +1,468 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-void: #07070d;
+  --color-ink: #0b0b16;
+  --color-panel: #10101d;
+  --color-edge: rgba(148, 163, 255, 0.09);
+  --color-accent: #8b5cf6;
+  --color-accent-2: #22d3ee;
+  --color-mint: #34d399;
+  --color-amber: #fbbf24;
+  --color-rose: #fb7185;
+
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-spin-slow: spin 14s linear infinite;
+  --animate-dash: dash 3s linear infinite;
+  --animate-flow: flow 2.4s linear infinite;
+}
+
+@keyframes dash {
+  to { stroke-dashoffset: -24; }
+}
+@keyframes flow {
+  0% { transform: translateX(-8px); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateX(8px); opacity: 0; }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-void);
+  color: #e2e8f0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.4);
+  color: #fff;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #07070d; }
+::-webkit-scrollbar-thumb { background: #262640; border-radius: 8px; border: 2px solid #07070d; }
+::-webkit-scrollbar-thumb:hover { background: #3b3b63; }
+
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+
+/* Glass panel */
+.panel {
+  background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+  border: 1px solid rgba(148, 163, 255, 0.1);
+  border-radius: 1.25rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Hover shine sweep — add to any card for a light pass on hover */
+.shine { position: relative; overflow: hidden; }
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.07) 50%, transparent 58%);
+  transform: translateX(-130%) rotate(0.001deg);
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.shine:hover::after { transform: translateX(130%) rotate(0.001deg); }
+
+/* Outlined ghost typography (section indices, footer wordmark) */
+.text-outline {
+  -webkit-text-stroke: 1.5px rgba(148, 163, 255, 0.22);
+  color: transparent;
+}
+
+/* Primary button sheen */
+.btn-sheen { position: relative; overflow: hidden; isolation: isolate; }
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.35) 50%, transparent 60%);
+  transform: translateX(-130%);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.btn-sheen:hover::after { transform: translateX(130%); }
+
+/* Blinking terminal cursor */
+.term-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: #22d3ee;
+  animation: term-blink 0.9s steps(1) infinite;
+}
+@keyframes term-blink { 50% { opacity: 0; } }
+.panel-hover {
+  transition: transform .35s cubic-bezier(.22,1,.36,1), border-color .35s, box-shadow .35s;
+}
+.panel-hover:hover {
+  transform: translateY(-4px);
+  border-color: rgba(139, 92, 246, 0.35);
+  box-shadow: 0 20px 50px -20px rgba(139, 92, 246, 0.25);
+}
+
+.grad-text {
+  background: linear-gradient(100deg, #c4b5fd 0%, #8b5cf6 35%, #22d3ee 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.grad-border {
+  position: relative;
+  background: #0d0d1a;
+  border-radius: 1rem;
+}
+.grad-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  padding: 1px;
+  background: linear-gradient(140deg, rgba(139,92,246,.55), rgba(34,211,238,.25), rgba(139,92,246,.08));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Background scene */
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 70% 45% at 15% -5%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(34, 211, 238, 0.1), transparent 60%),
+    radial-gradient(ellipse 50% 35% at 50% 110%, rgba(139, 92, 246, 0.07), transparent 70%),
+    #07070d;
+}
+/* film grain — instant premium texture */
+.scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+}
+.scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 255, 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 20%, transparent 80%);
+}
+
+/* Code block */
+.codeblock {
+  background: #0a0a14;
+  border: 1px solid rgba(148, 163, 255, 0.12);
+  border-radius: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.65;
+  overflow-x: auto;
+}
+.codeblock pre { padding: 1rem 1.1rem; white-space: pre; color: #cbd5e1; }
+.codeblock .c-kw { color: #c4b5fd; }
+.codeblock .c-str { color: #6ee7b7; }
+.codeblock .c-fn { color: #7dd3fc; }
+.codeblock .c-cm { color: #64748b; }
+.codeblock .c-num { color: #fbbf24; }
+
+/* Flow diagram pulse line */
+.flow-line {
+  stroke-dasharray: 6 10;
+  animation: dash 1.6s linear infinite;
+}
+
+/* Chips */
+.chip {
+  @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-wide;
+}
+
+/* Range inputs */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8b5cf6 var(--fill, 50%), #23233c var(--fill, 50%));
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 4px solid #8b5cf6;
+  cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(139,92,246,.2);
+  transition: transform .15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; border: 4px solid #8b5cf6; cursor: pointer;
+}
+
+/* Form fields */
+.field {
+  @apply w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-200 placeholder-slate-600 outline-none transition focus:border-violet-400/60 focus:bg-white/[0.05] focus:ring-4 focus:ring-violet-500/10;
+}
+select.field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%2394a3b8' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+html.light .field {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  color: #1e293b;
+  --tw-placeholder-opacity: 1;
+}
+html.light .field::placeholder { color: #94a3b8; }
+html.light .field:focus {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(139, 92, 246, 0.55);
+}
+html.light select.field option { background: #ffffff; color: #1e293b; }
+select.field option { background: #12121f; color: #e2e8f0; }
+
+
+/* Common dark-theme utility surfaces need a light counterpart too. */
+html.light .bg-white\/\[0\.03\] { background-color: rgba(15, 23, 42, 0.035); }
+html.light .bg-white\/\[0\.04\] { background-color: rgba(15, 23, 42, 0.045); }
+html.light .bg-white\/\[0\.05\] { background-color: rgba(15, 23, 42, 0.055); }
+html.light .bg-white\/\[0\.06\] { background-color: rgba(15, 23, 42, 0.06); }
+html.light .bg-white\/\[0\.07\] { background-color: rgba(15, 23, 42, 0.07); }
+html.light .border-white\/10 { border-color: rgba(15, 23, 42, 0.10); }
+html.light .border-white\/12 { border-color: rgba(15, 23, 42, 0.12); }
+html.light .border-white\/20 { border-color: rgba(15, 23, 42, 0.16); }
+html.light .border-white\/\[0\.05\] { border-color: rgba(15, 23, 42, 0.06); }
+html.light .border-white\/\[0\.06\] { border-color: rgba(15, 23, 42, 0.07); }
+html.light .border-white\/\[0\.07\] { border-color: rgba(15, 23, 42, 0.08); }
+html.light .border-white\/\[0\.08\] { border-color: rgba(15, 23, 42, 0.09); }
+html.light .border-white\/\[0\.1\] { border-color: rgba(15, 23, 42, 0.10); }
+html.light .hover\:bg-white\/5:hover { background-color: rgba(15, 23, 42, 0.05); }
+html.light .hover\:bg-white\/\[0\.06\]:hover { background-color: rgba(15, 23, 42, 0.06); }
+
+/* Step connector */
+.tick-ring {
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12), 0 0 24px rgba(139, 92, 246, 0.35);
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   LIGHT THEME — palette flip + surface overrides
+   Screens, terminals and diagram canvases intentionally stay dark
+   (framed media); page chrome goes light.
+   ═══════════════════════════════════════════════════════════════ */
+html.light { color-scheme: light; }
+
+/* Tailwind v4 emits utilities referencing these vars — flipping them
+   re-themes every text-white / text-slate-* / white-alpha surface. */
+html.light {
+  /* Keep the existing Tailwind utility names, but flip their palette to
+     readable light-theme values. Dark mode is untouched. */
+  --color-white: #0f172a;
+  --color-slate-50: #0f172a;
+  --color-slate-100: #172033;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+}
+
+html.light body {
+  background: #edf0f7;
+  color: #232740;
+}
+
+html.light .scene {
+  background:
+    radial-gradient(ellipse 70% 45% at 15% -5%, rgba(139, 92, 246, 0.14), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(34, 211, 238, 0.12), transparent 60%),
+    radial-gradient(ellipse 50% 35% at 50% 110%, rgba(139, 92, 246, 0.08), transparent 70%),
+    #edf0f7;
+}
+html.light .scene::before { opacity: 0.05; mix-blend-mode: multiply; }
+html.light .scene::after {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+}
+
+html.light .panel {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.55));
+  border-color: rgba(15, 23, 42, 0.09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 3px rgba(15, 23, 42, 0.07);
+}
+html.light .panel-hover:hover {
+  border-color: rgba(139, 92, 246, 0.45);
+  box-shadow: 0 18px 44px -18px rgba(139, 92, 246, 0.30);
+}
+
+html.light .grad-border { background: rgba(255, 255, 255, 0.92); }
+html.light .grad-border::before {
+  background: linear-gradient(140deg, rgba(139, 92, 246, 0.5), rgba(34, 211, 238, 0.35), rgba(139, 92, 246, 0.15));
+}
+
+/* Nav glass */
+.glass-nav { background: rgba(7, 7, 13, 0.82); }
+html.light .glass-nav { background: rgba(237, 240, 247, 0.85); }
+
+/* Sticky reading-progress fade (lesson pages) */
+.fade-top { background: linear-gradient(to bottom, #07070d 30%, rgba(7, 7, 13, 0.9) 70%, transparent); }
+html.light .fade-top { background: linear-gradient(to bottom, #edf0f7 30%, rgba(237, 240, 247, 0.92) 70%, transparent); }
+
+/* Form odds and ends */
+html.light select.field option { background: #ffffff; color: #232740; }
+html.light input[type="range"] {
+  background: linear-gradient(90deg, #8b5cf6 var(--fill, 50%), #d9deea var(--fill, 50%));
+}
+html.light ::-webkit-scrollbar-track { background: #edf0f7; }
+html.light ::-webkit-scrollbar-thumb { background: #c2c8da; border-color: #edf0f7; }
+html.light ::selection { background: rgba(139, 92, 246, 0.25); color: #0f1226; }
+
+/* Text glued onto always-dark canvases (terminals/code/diagrams) */
+.on-dark { color: #dbe2f0 !important; }
+.on-dark-dim { color: #8a93ad !important; }
+
+/* Framed media stays dark in BOTH themes: restore dark vars locally */
+.codeblock, .diagram-shell, .dark-canvas {
+  --color-white: #ffffff;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+}
+
+
+/* -------------------------------------------------------------------------
+   Light-theme accent readability
+   Pale dark-theme text such as text-amber-100 and text-emerald-100 becomes
+   nearly invisible on the light surfaces used by callouts and safety banners.
+   These overrides keep the same semantic colors while restoring contrast.
+
+   Uses [class*="..."] substring selectors (not exact classes) so every
+   opacity modifier — /70, /75, /80, /85, /90, or none — is caught in one
+   rule, instead of needing a new selector added every time a new opacity
+   fraction shows up somewhere in the app.
+   ------------------------------------------------------------------------- */
+html.light [class*="text-amber-100"],
+html.light [class*="text-amber-200"],
+html.light [class*="text-amber-300"],
+html.light [class*="text-amber-400"] {
+  color: #92400e !important;
+}
+
+html.light [class*="text-emerald-100"],
+html.light [class*="text-emerald-200"],
+html.light [class*="text-emerald-300"],
+html.light [class*="text-emerald-400"] {
+  color: #047857 !important;
+}
+
+html.light [class*="text-rose-100"],
+html.light [class*="text-rose-200"],
+html.light [class*="text-rose-300"],
+html.light [class*="text-rose-400"] {
+  color: #be123c !important;
+}
+
+/* Cyan guidance text is also too pale on the light cyan surfaces. */
+html.light [class*="text-cyan-100"],
+html.light [class*="text-cyan-200"],
+html.light [class*="text-cyan-300"],
+html.light [class*="text-cyan-400"] {
+  color: #0e7490 !important;
+}
+
+/* Sky, pink and violet share the same pastel-on-white problem and had no
+   light-theme coverage at all before this fix. */
+html.light [class*="text-sky-100"],
+html.light [class*="text-sky-200"],
+html.light [class*="text-sky-300"] {
+  color: #0369a1 !important;
+}
+
+html.light [class*="text-pink-100"],
+html.light [class*="text-pink-200"],
+html.light [class*="text-pink-300"] {
+  color: #be185d !important;
+}
+
+html.light [class*="text-violet-100"],
+html.light [class*="text-violet-200"] {
+  color: #6d28d9 !important;
+}
+
+/* Slightly clearer light-theme safety surfaces. */
+html.light .bg-amber-400\/\[0\.05\] {
+  background-color: rgba(245, 158, 11, 0.09);
+}
+
+html.light .bg-emerald-400\/\[0\.05\] {
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+html.light .border-amber-400\/20 {
+  border-color: rgba(180, 83, 9, 0.24);
+}
+
+html.light .border-emerald-400\/20 {
+  border-color: rgba(4, 120, 87, 0.22);
+}
+
+
+/* Decorative background must never interfere with interaction. */
+.scene {
+  pointer-events: none;
+}
+
+/* Respect users who request reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

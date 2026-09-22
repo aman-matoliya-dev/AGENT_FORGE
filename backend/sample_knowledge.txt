@@ -1,0 +1,1 @@
+﻿This is a test document about polymorphism in object-oriented programming.\n\nPolymorphism allows objects to be treated through a shared interface while their concrete behavior differs.\n\nA class can override methods and support dynamic dispatch.

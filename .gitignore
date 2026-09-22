@@ -1,0 +1,29 @@
+# Frontend
+node_modules/
+dist/
+dist-ssr/
+
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.db
+backend/.env
+backend/data/
+
+# Env files (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Editor/OS junk
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+backend_complete.txt
