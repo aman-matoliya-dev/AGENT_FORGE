@@ -133,7 +133,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <Logo />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">
               From zero AI knowledge to a running agent on your own machine. Learn the concepts, check your hardware, build for real.
             </p>
           </div>
@@ -149,7 +149,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             AgentForge
           </div>
         </div>
-        <div className="border-t border-white/[0.05] py-6 text-center text-xs text-slate-600">
+        <div className="border-t border-white/[0.05] py-6 text-center text-xs text-slate-400">
           AgentForge — an educational platform. Always download models and API keys from official sources.
         </div>
       </footer>
@@ -160,7 +160,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 function FooterCol({ title, links, external }: { title: string; links: [string, string][]; external?: boolean }) {
   return (
     <div>
-      <div className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</div>
+      <div className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{title}</div>
       <ul className="space-y-2.5">
         {links.map(([label, to]) => (
           <li key={label}>

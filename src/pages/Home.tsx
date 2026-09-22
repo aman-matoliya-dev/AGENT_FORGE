@@ -166,7 +166,7 @@ export default function Home() {
             <span key={m.id} className="dark-canvas flex items-center gap-2 rounded-full border border-white/[0.08] bg-[#0c0c1a] px-4 py-1.5 text-xs text-slate-400">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               <span className="font-semibold text-slate-200">{m.name}</span>
-              <span className="font-mono text-[10px] text-slate-600">{m.params} · runs locally</span>
+              <span className="font-mono text-[10px] text-slate-400">{m.params} · runs locally</span>
             </span>
           ))}
         </Marquee>
