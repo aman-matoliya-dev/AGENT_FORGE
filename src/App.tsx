@@ -12,6 +12,8 @@ import BrainChoice from './pages/BrainChoice';
 import Resources from './pages/Resources';
 import Dashboard from './pages/Dashboard';
 import KnowledgeManager from './pages/KnowledgeManager';
+import MyAgents from './pages/MyAgents';
+import ExecutionHistory from './pages/ExecutionHistory';
 
 
 export default function App() {
@@ -25,6 +27,8 @@ export default function App() {
             <Route path="/learn" element={<Learn />} />
             <Route path="/learn/:id" element={<Lesson />} />
             <Route path="/builder" element={<Builder />} />
+            <Route path="/agents" element={<MyAgents />} />
+            <Route path="/history" element={<ExecutionHistory />} />
             <Route path="/knowledge" element={<KnowledgeManager />} />
             <Route path="/device" element={<HardwareAdvisor />} />
             <Route path="/brain" element={<BrainChoice />} />

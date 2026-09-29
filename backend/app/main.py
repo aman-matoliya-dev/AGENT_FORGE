@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.agent_routes import router as agent_router
 from app.api.knowledge_routes import router as knowledge_router
+from app.api.saved_agents_routes import router as saved_agents_router
 from app.services import db
 
 
@@ -61,6 +62,7 @@ app.add_middleware(
 
 app.include_router(agent_router)
 app.include_router(knowledge_router)
+app.include_router(saved_agents_router)
 
 
 @app.get("/")

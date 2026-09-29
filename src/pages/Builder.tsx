@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import JSZip from 'jszip';
 import {
@@ -20,7 +20,7 @@ import ArchitectureDiagram from '../components/ArchitectureDiagram';
 import { Code, CopyBtn, FitBadge, GhostBtn, PrimaryBtn, Tip } from '../components/ui';
 import { Magnetic, slideVariants, Stagger, StaggerItem, Tilt } from '../components/motion';
 import { cn } from '../utils/cn';
-import { runAgent, type KnowledgeSource } from '../utils/api';
+import { createSavedAgent, runAgent, type KnowledgeSource } from '../utils/api';
 
 const STEPS = [
   { id: 'identity', label: 'Identity', icon: User },
@@ -58,6 +58,7 @@ function StepShell({ title, sub, why, children }: { title: string; sub: string; 
 }
 
 export default function Builder() {
+  const navigate = useNavigate();
   const { device, agentType, setAgentType, brainPref, saveAgent } = useApp();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
@@ -78,6 +79,8 @@ export default function Builder() {
   const [conversationId, setConversationId] = useState<string>();
   const [testMetadata, setTestMetadata] = useState('');
   const [testSources, setTestSources] = useState<KnowledgeSource[]>([]);
+  const [savingAgent, setSavingAgent] = useState(false);
+  const [saveAgentError, setSaveAgentError] = useState('');
 
   const set = (patch: Partial<typeof cfg>) => setCfg((c) => ({ ...c, ...patch }));
   const sysPrompt = useMemo(() => buildSystemPrompt({ ...cfg, id: 'x', createdAt: 0 }), [cfg]);
@@ -178,6 +181,43 @@ export default function Builder() {
     }
   };
 
+  const saveConfiguration = async () => {
+    if (!savedAgent || savingAgent) return;
+    const provider = savedAgent.brain === 'local'
+      ? 'ollama'
+      : savedAgent.providerId === 'google'
+        ? 'gemini'
+        : null;
+    if (!provider) {
+      setSaveAgentError('Saved agents currently support Gemini and Ollama configurations.');
+      return;
+    }
+
+    setSavingAgent(true);
+    setSaveAgentError('');
+    try {
+      const ollamaModel = localModelById(savedAgent.modelId)?.ollama.replace(/^ollama run\s+/, '');
+      await createSavedAgent({
+        name: savedAgent.name,
+        description: savedAgent.purpose,
+        purpose: savedAgent.purpose,
+        personality: savedAgent.personality,
+        provider,
+        model: provider === 'gemini' ? 'gemini-3.6-flash' : ollamaModel ?? 'llama3.2:latest',
+        agentType: savedAgent.agentType,
+        tools: savedAgent.tools,
+        memory: savedAgent.memory,
+        knowledge: savedAgent.knowledge,
+        outputStyle: savedAgent.outputStyle,
+      });
+      navigate('/agents');
+    } catch (error) {
+      setSaveAgentError(error instanceof Error ? error.message : 'Could not save this agent.');
+    } finally {
+      setSavingAgent(false);
+    }
+  };
+
   const restart = () => { setSavedAgent(null); setStep(0); };
 
   const downloadZip = async () => {
@@ -219,8 +259,12 @@ export default function Builder() {
               <Download className="h-4 w-4" /> {downloading ? 'Packing…' : `Download ${slugify(savedAgent.name)}.zip`}
             </PrimaryBtn>
             <GhostBtn onClick={restart}><Hammer className="h-4 w-4" /> Build another</GhostBtn>
-            <Link to="/dashboard"><GhostBtn><Save className="h-4 w-4" /> Saved to dashboard</GhostBtn></Link>
+            <PrimaryBtn onClick={saveConfiguration} disabled={savingAgent}>
+              <Save className="h-4 w-4" /> {savingAgent ? 'Saving…' : 'Save to My Agents'}
+            </PrimaryBtn>
+            <Link to="/agents"><GhostBtn><User className="h-4 w-4" /> My Agents</GhostBtn></Link>
           </div>
+          {saveAgentError && <p role="alert" className="relative mt-4 text-sm text-rose-200">{saveAgentError}</p>}
         </motion.div>
 
         {/* live agent test */}

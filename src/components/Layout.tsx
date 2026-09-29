@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'framer-motion';
-import { Bot, LayoutDashboard, GraduationCap, Hammer, CircuitBoard, Scale, Library, Menu, X, ChevronRight, BookOpen } from 'lucide-react';
+import { Bot, LayoutDashboard, GraduationCap, Hammer, CircuitBoard, Scale, Library, Menu, X, ChevronRight, BookOpen, History } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useApp } from '../context/AppContext';
 import { LESSONS } from '../data/learning';
@@ -11,6 +11,8 @@ import ThemeToggle from './ThemeToggle';
 const NAV = [
   { to: '/learn', label: 'Learn', icon: GraduationCap },
   { to: '/builder', label: 'Build', icon: Hammer },
+  { to: '/agents', label: 'My Agents', icon: Bot },
+  { to: '/history', label: 'Execution History', icon: History },
   { to: '/knowledge', label: 'Knowledge', icon: BookOpen },
   { to: '/device', label: 'Device Check', icon: CircuitBoard },
   { to: '/brain', label: 'Local vs API', icon: Scale },

@@ -123,12 +123,122 @@ export interface AgentResponse {
   sources?: KnowledgeSource[];
 }
 
+export interface ExecutionRun {
+  runId: number;
+  agentName: string;
+  createdAt: string;
+  completedAt: string | null;
+  status: "running" | "succeeded" | "failed";
+  provider: string;
+  model: string | null;
+  durationMs: number | null;
+  resultSummary: string | null;
+  errorSummary: string | null;
+  toolsUsed: string[];
+  messageLength: number;
+}
+
+export interface ExecutionRunList {
+  success: boolean;
+  runs: ExecutionRun[];
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+export async function listExecutionRuns(limit = 25, offset = 0): Promise<ExecutionRunList> {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  const response = await fetch(`${API_BASE_URL}/api/agent/runs?${params}`);
+  if (!response.ok) throw await apiError(response, "Failed to load execution history.");
+  return response.json();
+}
+
+export async function getExecutionRun(runId: number): Promise<ExecutionRun> {
+  const response = await fetch(`${API_BASE_URL}/api/agent/runs/${runId}`);
+  if (!response.ok) throw await apiError(response, "Failed to load execution details.");
+  const data: { success: boolean; run: ExecutionRun } = await response.json();
+  return data.run;
+}
+
 export interface KnowledgeSource {
   documentId?: string;
   chunkId?: string;
   filename: string;
   page?: number;
   score?: number;
+}
+
+export interface SavedAgent {
+  id: string;
+  name: string;
+  description: string;
+  purpose: string;
+  personality: string;
+  provider: "gemini" | "ollama";
+  model: string | null;
+  agentType: string;
+  tools: string[];
+  memory: "none" | "buffer" | "window" | "summary";
+  knowledge: "none" | "rag";
+  outputStyle: "concise" | "detailed" | "steps";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SavedAgentInput = Omit<SavedAgent, "id" | "createdAt" | "updatedAt">;
+export type SavedAgentUpdate = Partial<SavedAgentInput>;
+
+async function apiError(response: Response, fallback: string): Promise<Error> {
+  try {
+    const data = await response.json();
+    if (typeof data?.detail === "string") return new Error(data.detail);
+  } catch {
+    // Non-JSON error bodies use the caller's fallback.
+  }
+  return new Error(fallback);
+}
+
+export async function listSavedAgents(): Promise<SavedAgent[]> {
+  const response = await fetch(`${API_BASE_URL}/api/agents`);
+  if (!response.ok) throw await apiError(response, "Failed to load saved agents.");
+  const data: { success: boolean; agents: SavedAgent[] } = await response.json();
+  return data.agents;
+}
+
+export async function getSavedAgent(agentId: string): Promise<SavedAgent> {
+  const response = await fetch(`${API_BASE_URL}/api/agents/${encodeURIComponent(agentId)}`);
+  if (!response.ok) throw await apiError(response, "Failed to load this agent.");
+  const data: { success: boolean; agent: SavedAgent } = await response.json();
+  return data.agent;
+}
+
+export async function createSavedAgent(agent: SavedAgentInput): Promise<SavedAgent> {
+  const response = await fetch(`${API_BASE_URL}/api/agents`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(agent),
+  });
+  if (!response.ok) throw await apiError(response, "Failed to save agent.");
+  const data: { success: boolean; agent: SavedAgent } = await response.json();
+  return data.agent;
+}
+
+export async function updateSavedAgent(agentId: string, changes: SavedAgentUpdate): Promise<SavedAgent> {
+  const response = await fetch(`${API_BASE_URL}/api/agents/${encodeURIComponent(agentId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(changes),
+  });
+  if (!response.ok) throw await apiError(response, "Failed to update agent.");
+  const data: { success: boolean; agent: SavedAgent } = await response.json();
+  return data.agent;
+}
+
+export async function deleteSavedAgent(agentId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/agents/${encodeURIComponent(agentId)}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) throw await apiError(response, "Failed to delete agent.");
 }
 
 export interface KnowledgeDocument {
