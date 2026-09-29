@@ -1,14 +1,19 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.models.knowledge_models import KnowledgeSearchRequest
-from app.services.knowledge import knowledge_service
+from app.services.knowledge import MAX_UPLOAD_BYTES, knowledge_service
 
 router = APIRouter(prefix="/api/knowledge", tags=["Knowledge"])
 @router.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
     if not file.filename:
         raise HTTPException(status_code=400, detail="A filename is required.")
-    content = await file.read()
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"The uploaded file exceeds the {MAX_UPLOAD_BYTES // (1024 * 1024)} MiB size limit.",
+        )
 
     try:
         result = knowledge_service.upload_document(file.filename, content, content_type=file.content_type)

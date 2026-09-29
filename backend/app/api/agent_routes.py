@@ -1,3 +1,4 @@
+import logging
 import uuid
 import time
 
@@ -11,6 +12,7 @@ from app.services.tools import registry, SUPPORTED_TOOLS
 
 
 router = APIRouter(prefix="/api/agent", tags=["Agent"])
+logger = logging.getLogger(__name__)
 
 
 class AgentRequest(BaseModel):
@@ -118,16 +120,17 @@ def run_agent(
         )
         raise HTTPException(status_code=400, detail=str(error))
 
-    except Exception as error:
+    except Exception:
         db.finish_run(
             run_id,
             success=False,
             duration_ms=int((time.perf_counter() - started) * 1000),
             error_type="provider_error",
         )
+        logger.exception("Agent run failed for provider %s", request.config.provider)
         raise HTTPException(
             status_code=502,
-            detail=f"{request.config.provider} didn't respond — try again, or switch providers. ({error})",
+            detail=f"{request.config.provider} didn't respond — try again, or switch providers.",
         )
 
 
