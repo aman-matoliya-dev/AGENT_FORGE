@@ -105,7 +105,7 @@ export default function MyAgents() {
     setSaving(true);
     setError('');
     try {
-      const updated = await updateSavedAgent(editing.id, { ...form, model: form.model.trim() || null });
+      const updated = await updateSavedAgent(editing.id, { ...form, model: form.model?.trim() || null });
       setAgents((current) => current.map((agent) => agent.id === updated.id ? updated : agent));
       setEditing(null);
       setFeedback(`Saved changes to ${updated.name}.`);
