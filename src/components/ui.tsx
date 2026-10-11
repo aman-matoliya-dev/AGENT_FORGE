@@ -10,9 +10,9 @@ export function PrimaryBtn({ children, onClick, className, disabled }: {
 }) {
   return (
     <motion.button onClick={onClick} disabled={disabled}
-      whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.96, y: 0 }}
+      whileHover={{ y: -1 }} whileTap={{ scale: 0.985, y: 1 }}
       transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-      className={cn('btn-sheen group relative inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-400 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition-shadow hover:shadow-violet-500/45 disabled:opacity-40 disabled:pointer-events-none', className)}>
+      className={cn('btn-sheen af-primary-btn group relative inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold disabled:pointer-events-none', className)}>
       {children}
     </motion.button>
   );
@@ -23,12 +23,10 @@ export function GhostBtn({ children, onClick, className, active }: {
 }) {
   return (
     <motion.button onClick={onClick}
-      whileHover={{ y: -1.5 }} whileTap={{ scale: 0.96 }}
+      whileHover={{ y: -1 }} whileTap={{ scale: 0.985, y: 1 }}
       transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-      className={cn('inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-medium transition-colors',
-        active
-          ? 'border-violet-400/50 bg-violet-500/15 text-violet-200'
-          : 'border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/20 hover:bg-white/[0.06]', className)}>
+      data-active={active ? 'true' : undefined}
+      className={cn('af-ghost-btn inline-flex items-center justify-center gap-2 border px-5 py-3 text-sm font-medium', className)}>
       {children}
     </motion.button>
   );
@@ -48,8 +46,8 @@ export function FitBadge({ fit, small }: { fit: Fit; small?: boolean }) {
 
 export function CloudBadge({ small }: { small?: boolean }) {
   return (
-    <span className={cn('chip border border-sky-400/30 bg-sky-400/10 text-sky-300', small ? 'text-[10px] px-2 py-0.5' : '')}>
-      <span className="h-1.5 w-1.5 rounded-full bg-sky-400" /> Cloud API
+    <span className={cn('chip af-badge-mineral border', small ? 'text-[10px] px-2 py-0.5' : '')}>
+      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" /> Cloud API
     </span>
   );
 }
@@ -72,11 +70,11 @@ export function SectionHead({ kicker, title, sub, center, index }: { kicker: str
           {index}
         </span>
       )}
-      <div className="relative mb-3 inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-300">
+      <div className="af-section-kicker relative mb-3 inline-flex items-center gap-2 text-[11px] font-semibold uppercase">
         {kicker}
       </div>
-      <h2 className="relative font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">{title}</h2>
-      {sub && <p className={cn('relative mt-3 max-w-2xl text-[15px] leading-relaxed text-slate-400', center && 'mx-auto')}>{sub}</p>}
+      <h2 className="af-section-title relative font-display text-3xl font-bold tracking-[-0.035em] sm:text-4xl">{title}</h2>
+      {sub && <p className={cn('af-section-description relative mt-3 max-w-2xl text-[15px] leading-relaxed', center && 'mx-auto')}>{sub}</p>}
     </div>
   );
 }
@@ -88,7 +86,7 @@ export function Tip({ text, children }: { text: string; children?: ReactNode }) 
     <span className="relative inline-flex items-center gap-1" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       {children ?? <Info className="h-3.5 w-3.5 cursor-help text-slate-500 hover:text-violet-300" />}
       {open && (
-        <span className="dark-canvas pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-60 -translate-x-1/2 rounded-lg border border-white/10 bg-[#14142a] px-3 py-2 text-xs leading-relaxed text-slate-300 shadow-xl shadow-black/50">
+        <span className="af-tooltip dark-canvas pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-60 -translate-x-1/2 border px-3 py-2 text-xs leading-relaxed text-slate-300">
           {text}
         </span>
       )}
@@ -98,14 +96,31 @@ export function Tip({ text, children }: { text: string; children?: ReactNode }) 
 
 /* ── Copy button ── */
 export function CopyBtn({ text, label }: { text: string; label?: string }) {
-  const [ok, setOk] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatus('copied');
+    } catch {
+      setStatus('failed');
+    }
+    window.setTimeout(() => setStatus('idle'), 1600);
+  };
+
   return (
-    <button
-      onClick={() => { navigator.clipboard?.writeText(text).catch(() => {}); setOk(true); setTimeout(() => setOk(false), 1600); }}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs font-medium text-slate-300 transition hover:border-violet-400/40 hover:text-white">
-      {ok ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-      {ok ? 'Copied' : label ?? 'Copy'}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => { void copy(); }}
+        aria-label={label ? `Copy ${label}` : 'Copy to clipboard'}
+        className={`inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs font-medium text-slate-300 transition hover:border-violet-400/40 hover:text-white ${status === 'failed' ? 'text-rose-300' : ''}`}>
+        {status === 'copied' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+        {status === 'copied' ? 'Copied' : status === 'failed' ? 'Copy failed' : label ?? 'Copy'}
+      </button>
+      <span role="status" aria-live="polite" className="sr-only">
+        {status === 'copied' ? 'Copied to clipboard.' : status === 'failed' ? 'Copy failed. Clipboard was not updated.' : ''}
+      </span>
+    </>
   );
 }
 
@@ -143,10 +158,10 @@ function tint(code: string): string {
 /* ── Progress bar ── */
 export function ProgressBar({ value, accent }: { value: number; accent?: string }) {
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
-      <motion.div className="h-full rounded-full"
-        style={{ background: accent ?? 'linear-gradient(90deg,#8b5cf6,#22d3ee)' }}
-        initial={{ width: 0 }} animate={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+    <div className="h-1.5 w-full overflow-hidden rounded-sm bg-white/[0.08]">
+      <motion.div className="h-full origin-left"
+        style={{ background: accent ?? 'var(--accent-forge)' }}
+        initial={{ scaleX: 0 }} animate={{ scaleX: Math.min(100, Math.max(0, value)) / 100 }}
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
     </div>
   );

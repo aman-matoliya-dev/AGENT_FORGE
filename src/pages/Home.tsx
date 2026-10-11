@@ -1,359 +1,503 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowRight, Brain, CircuitBoard, GraduationCap, Hammer, Scale, Wrench,
-  Database, BookOpen, Workflow, Sparkles, Terminal, Shield, Zap, Route,
-  CheckCircle2, ChevronRight, MousePointerClick, Boxes,
+  ArrowRight, Brain, BookOpen, Boxes, CheckCircle2, ChevronRight,
+  CircuitBoard, GraduationCap, Hammer, Route, Scale, Shield, Terminal,
+  Workflow, Wrench, Zap,
 } from 'lucide-react';
-import { Reveal, SectionHead } from '../components/ui';
-import {
-  Counter, Magnetic, Marquee, Stagger, StaggerItem, Tilt, WordReveal,
-} from '../components/motion';
 import { LESSONS } from '../data/learning';
 import { API_PROVIDERS, LOCAL_MODELS, RUNTIMES } from '../data/models';
 import { RESOURCE_CATEGORIES } from '../data/resources';
 import { useApp } from '../context/AppContext';
 import AgentTrace from '../components/AgentTrace';
 import NeuralSphere from '../components/NeuralSphere';
+import { Marquee } from '../components/motion';
 
-/* ── Animated agent-loop hero visual ── */
-function HeroLoop() {
-  const orbiters = [
-    { icon: Wrench, label: 'Tools', color: '#fbbf24', angle: 0 },
-    { icon: Database, label: 'Memory', color: '#f472b6', angle: 120 },
-    { icon: BookOpen, label: 'Knowledge', color: '#34d399', angle: 240 },
-  ];
-  const trace = [
-    { t: 'THINK', c: '#22d3ee' }, { t: 'ACT', c: '#fbbf24' }, { t: 'OBSERVE', c: '#34d399' },
-  ];
+const PILLARS = [
+  {
+    icon: GraduationCap,
+    title: 'Learn the concepts',
+    desc: 'A 10-lesson curriculum covers agent fundamentals, tools, memory, planning, and retrieval.',
+    to: '/learn',
+    cta: 'Start lesson one',
+  },
+  {
+    icon: CircuitBoard,
+    title: 'Check your device',
+    desc: 'Compare reported hardware signals with local model requirements. Results are estimates, not benchmarks.',
+    to: '/device',
+    cta: 'Check device fit',
+  },
+  {
+    icon: Scale,
+    title: 'Choose a model source',
+    desc: 'Compare local runtimes and hosted API providers, then select an approach in the builder.',
+    to: '/brain',
+    cta: 'Compare options',
+  },
+  {
+    icon: Hammer,
+    title: 'Build a starter agent',
+    desc: 'Configure an agent in a guided wizard and generate a commented starter project in Python or JavaScript.',
+    to: '/builder',
+    cta: 'Open the builder',
+  },
+];
+
+const JOURNEY = [
+  { title: 'Learn', desc: 'Understand agent fundamentals', to: '/learn', icon: GraduationCap },
+  { title: 'Check', desc: 'Estimate local model fit', to: '/device', icon: CircuitBoard },
+  { title: 'Choose', desc: 'Compare local and hosted models', to: '/brain', icon: Scale },
+  { title: 'Build', desc: 'Configure your agent', to: '/builder', icon: Hammer },
+  { title: 'Run', desc: 'Work with the generated starter code', to: '/builder', icon: Terminal },
+];
+
+const REASONS = [
+  {
+    icon: Shield,
+    title: 'Understand the trade-offs',
+    desc: 'Learn when local execution or a hosted API makes sense, including the privacy and hardware considerations.',
+  },
+  {
+    icon: Zap,
+    title: 'Read what you generate',
+    desc: 'The builder creates a starter project with comments, so you can inspect and adapt its files.',
+  },
+  {
+    icon: Route,
+    title: 'Treat hardware results as guidance',
+    desc: 'The device checker estimates model fit from available hardware signals. It does not benchmark models.',
+  },
+];
+
+const STAGGER_VARIANTS = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06, delayChildren: 0.03 } },
+};
+
+const STAGGER_ITEM_VARIANTS = {
+  hidden: { opacity: 0, y: 18 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring' as const, stiffness: 90, damping: 20 },
+  },
+};
+
+function HomeReveal({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const reducedMotion = useReducedMotion();
+
   return (
-    <div className="dark-canvas relative mx-auto aspect-square w-full max-w-[440px]">
-      {/* aura */}
-      <div className="absolute inset-8 rounded-full bg-violet-500/10 blur-3xl" />
-      {/* orbit rings */}
-      <div className="absolute inset-4 rounded-full border border-dashed border-violet-400/20 animate-spin-slow" />
-      <div className="absolute inset-16 rounded-full border border-cyan-400/15" style={{ animation: 'spin 26s linear infinite reverse' }} />
-      {/* center brain */}
+    <motion.div
+      className={className}
+      initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-48px' }}
+      transition={{ duration: reducedMotion ? 0 : 0.55, delay: reducedMotion ? 0 : delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function HomeStagger({
+  children,
+  className,
+  amount = 0.15,
+}: {
+  children: ReactNode;
+  className?: string;
+  amount?: number;
+}) {
+  const reducedMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      variants={STAGGER_VARIANTS}
+      initial={reducedMotion ? 'show' : 'hidden'}
+      whileInView="show"
+      viewport={{ once: true, amount }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function HomeStaggerItem({ children }: { children: ReactNode }) {
+  const reducedMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      variants={reducedMotion
+        ? { hidden: { opacity: 1, y: 0 }, show: { opacity: 1, y: 0, transition: { duration: 0 } } }
+        : STAGGER_ITEM_VARIANTS}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function formatHomepageCopy(text: string) {
+  return text.replace(/\s*[—–]\s*/g, ', ');
+}
+
+function AgentMap() {
+  return (
+    <div
+      role="img"
+      aria-label="Conceptual map connecting a language model with tools, memory, and knowledge"
+      className="relative mx-auto aspect-square w-full max-w-[430px]"
+    >
+      <div aria-hidden className="absolute inset-[8%] rounded-full border border-white/10" />
+      <div aria-hidden className="absolute inset-[20%] rounded-full border border-dashed border-violet-500/30" />
+      <div aria-hidden className="absolute left-1/2 top-[8%] h-[84%] w-px -translate-x-1/2 bg-white/[0.08]" />
+      <div aria-hidden className="absolute left-[8%] top-1/2 h-px w-[84%] -translate-y-1/2 bg-white/[0.08]" />
+
       <div className="absolute inset-0 grid place-items-center">
-        <motion.div
-          animate={{ boxShadow: ['0 0 40px 0 rgba(139,92,246,.35)', '0 0 70px 10px rgba(139,92,246,.5)', '0 0 40px 0 rgba(139,92,246,.35)'] }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          className="relative grid h-28 w-28 place-items-center rounded-3xl border border-violet-400/40 bg-gradient-to-br from-[#171432] to-[#0c0c1a]">
-          <Brain className="h-12 w-12 text-violet-300" />
-          <span className="absolute -bottom-3 rounded-full border border-violet-400/30 bg-[#14122b] px-3 py-0.5 text-[10px] font-bold tracking-widest text-violet-300">LLM</span>
-        </motion.div>
+        <div className="grid h-28 w-28 place-items-center border border-violet-500/50 bg-[var(--surface-panel)] text-violet-500 sm:h-32 sm:w-32">
+          <Brain className="h-11 w-11" strokeWidth={1.4} />
+          <span className="absolute mt-[5.25rem] bg-[var(--surface-void)] px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-300 sm:mt-[5.75rem]">
+            Model
+          </span>
+        </div>
       </div>
-      {/* orbiting nodes */}
-      {orbiters.map((o, i) => (
-        <motion.div key={o.label} className="absolute inset-0"
-          animate={{ rotate: 360 }} transition={{ duration: 22 + i * 4, repeat: Infinity, ease: 'linear' }}>
-          <div className="absolute left-1/2 top-1/2"
-            style={{ transform: `rotate(${o.angle}deg) translate(0, -100%) translateY(-46%)` }}>
-            <motion.div animate={{ rotate: -360 }} transition={{ duration: 22 + i * 4, repeat: Infinity, ease: 'linear' }}
-              className="flex -translate-x-1/2 flex-col items-center gap-1.5">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl border bg-[#101022] shadow-lg"
-                style={{ borderColor: o.color + '55', boxShadow: `0 8px 30px -8px ${o.color}55` }}>
-                <o.icon className="h-5 w-5" style={{ color: o.color }} />
-              </span>
-              <span className="rounded-xl border border-white/10 bg-[#0d0d1c] px-2 py-0.5 text-[10px] font-semibold text-slate-300">{o.label}</span>
-            </motion.div>
+
+      {[
+        { label: 'Tools', icon: Wrench, position: 'left-1/2 top-[3%] -translate-x-1/2' },
+        { label: 'Memory', icon: Boxes, position: 'right-[1%] top-1/2 -translate-y-1/2' },
+        { label: 'Knowledge', icon: BookOpen, position: 'bottom-[3%] left-1/2 -translate-x-1/2' },
+      ].map(({ label, icon: Icon, position }, index) => (
+        <div key={label} className={`absolute ${position}`}>
+          <div className="flex min-w-24 flex-col items-center gap-2 border border-white/10 bg-[var(--surface-void)] px-3 py-3 text-slate-300">
+            <Icon className={`h-5 w-5 ${index === 1 ? 'text-cyan-400' : 'text-violet-500'}`} strokeWidth={1.5} />
+            <span className="text-xs font-medium">{label}</span>
           </div>
-        </motion.div>
+        </div>
       ))}
-      {/* loop trace chips */}
-      <div className="absolute -bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
-        {trace.map((x, i) => (
-          <motion.span key={x.t}
-            animate={{ opacity: [0.35, 1, 0.35], scale: [0.96, 1.04, 0.96] }}
-            transition={{ duration: 2.1, repeat: Infinity, delay: i * 0.7 }}
-            className="rounded-xl border px-2.5 py-1 text-[10px] font-bold tracking-wider"
-            style={{ color: x.c, borderColor: x.c + '44', background: '#0c0c1a' }}>
-            {x.t}
-          </motion.span>
-        ))}
-      </div>
-      {/* floating user msg */}
-      <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity }}
-        className="absolute -left-2 top-6 max-w-[170px] rounded-xl rounded-bl-sm border border-white/10 bg-[#12122a]/90 p-2.5 text-[10px] leading-snug text-slate-300 shadow-xl backdrop-blur">
-        “Summarise today’s AI news and save it to my notes”
-      </motion.div>
-      <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 6, repeat: Infinity, delay: 1 }}
-        className="absolute -right-2 bottom-16 max-w-[150px] rounded-xl border border-emerald-400/25 bg-[#0d1a14]/90 p-2.5 text-[10px] leading-snug text-emerald-200/90 shadow-xl backdrop-blur">
-        Done — saved 5 headlines to notes.txt
-      </motion.div>
     </div>
   );
 }
 
-const PILLARS = [
-  { icon: GraduationCap, color: '#8b5cf6', title: 'Learn the concepts', desc: 'A 10-lesson path that takes you from “what is an agent?” to planning, RAG and tools — with interactive diagrams, not walls of jargon.', to: '/learn', cta: 'Start lesson 1' },
-  { icon: CircuitBoard, color: '#22d3ee', title: 'Check your device', desc: 'Find out exactly which AI models your computer can run locally. Auto-detect your hardware, get a tier, see honest fits.', to: '/device', cta: 'Run device check' },
-  { icon: Scale, color: '#fbbf24', title: 'Choose your brain', desc: 'Local brain for privacy and offline use, or API brain for instant power. Compare both honestly and switch anytime.', to: '/brain', cta: 'Compare options' },
-  { icon: Hammer, color: '#34d399', title: 'Build for real', desc: 'A guided wizard that explains every choice, then generates a complete, commented starter project in Python or JavaScript.', to: '/builder', cta: 'Open the builder' },
-];
-
 export default function Home() {
   const { done, device, agents } = useApp();
-  const { scrollY } = useScroll();
-  const yHero = useTransform(scrollY, [0, 500], [0, 80]);
-  const opHero = useTransform(scrollY, [0, 400], [1, 0.25]);
+  const reducedMotion = useReducedMotion();
+  const platformItems = [
+    ...LOCAL_MODELS.map((model) => ({ key: `model-${model.id}`, name: model.name, detail: model.params })),
+    ...RUNTIMES.map((runtime) => ({ key: `runtime-${runtime.name}`, name: runtime.name, detail: 'Runtime' })),
+    ...API_PROVIDERS.map((provider) => ({ key: `provider-${provider.name}`, name: provider.name, detail: 'API provider' })),
+  ];
+  const platformTicker = (
+    <div className="flex w-max items-center gap-3 pr-3">
+      {platformItems.map((item) => (
+        <span
+          key={item.key}
+          className="inline-flex items-baseline gap-2 border border-white/10 bg-white/[0.025] px-3 py-2 text-xs text-slate-300"
+        >
+          <span className="font-medium text-white">{item.name}</span>
+          <span className="font-mono text-[10px] text-slate-500">{item.detail}</span>
+        </span>
+      ))}
+    </div>
+  );
 
   return (
     <div>
-      {/* ── Hero ── */}
-      <section className="relative overflow-hidden px-4 pb-16 pt-16 sm:px-6 sm:pt-24">
-        {/* 3D particle sphere — pointer-reactive backdrop */}
-        <NeuralSphere className="pointer-events-none absolute inset-0 h-full w-full opacity-60 [mask-image:radial-gradient(ellipse_75%_70%_at_50%_42%,black_35%,transparent_75%)]" />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2">
-          <div>
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-              <span className="inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-4 py-1.5 text-xs font-semibold text-violet-300">
-                <Sparkles className="h-3.5 w-3.5" /> The beginner-friendly agent platform
-              </span>
-            </motion.div>
-            <h1 className="mt-6 font-display font-bold leading-[1.04] tracking-tight text-white" style={{ fontSize: 'clamp(2.5rem, 5.8vw, 4.5rem)' }}>
-              <WordReveal text="Build your first" delay={0.15} />{' '}
-              <span className="grad-text"><WordReveal text="AI agent" delay={0.42} /></span>{' '}
-              <WordReveal text="— and actually understand it." delay={0.62} stagger={0.07} />
-            </h1>
-            <motion.p initial={{ opacity: 0, y: 24, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 0.8, delay: 0.9 }}
-              className="mt-6 max-w-xl text-lg leading-relaxed text-slate-400">
-              Learn how agents think, check which models your computer can run, choose between local and API brains, and walk away with a working agent — no prior knowledge needed.
+      <section className="relative overflow-hidden px-4 pb-12 pt-8 sm:px-6 sm:pb-16 lg:min-h-[calc(100dvh-4.5rem)] lg:pt-10">
+        {!reducedMotion && (
+          <NeuralSphere className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.08] [mask-image:radial-gradient(ellipse_65%_70%_at_76%_42%,black_15%,transparent_74%)]" />
+        )}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(ellipse_at_78%_42%,rgba(255,120,61,0.08),transparent_55%)]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+          <div className="relative z-[1]">
+            <motion.p
+              initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: reducedMotion ? 0 : 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="mb-5 font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-violet-500"
+            >
+              A practical AI-agent workspace
             </motion.p>
-            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 90, damping: 16, delay: 1.05 }}
-              className="mt-9 flex flex-wrap items-center gap-4">
-              <Magnetic>
-                <Link to="/learn" className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-400 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 transition hover:brightness-110">
-                  <GraduationCap className="h-4.5 w-4.5" /> Start learning free
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Magnetic>
-              <Magnetic>
-                <Link to="/device" className="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.03] px-7 py-3.5 text-sm font-semibold text-slate-200 transition hover:border-cyan-400/40 hover:bg-white/[0.06]">
-                  <CircuitBoard className="h-4.5 w-4.5 text-cyan-300" /> Can my PC run AI?
-                </Link>
-              </Magnetic>
-            </motion.div>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}
-              className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-sm text-slate-500">
-              {['10 guided lessons', 'Hardware advisor', 'Real code output', '100% free'].map((s) => (
-                <span key={s} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" />{s}</span>
-              ))}
+            <motion.h1
+              initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: reducedMotion ? 0 : 0.55, delay: reducedMotion ? 0 : 0.06, ease: [0.22, 1, 0.36, 1] }}
+              className="font-display text-[clamp(1.875rem,3.6vw,3.25rem)] font-bold leading-[1.02] tracking-[-0.05em] text-white [text-wrap:balance]"
+            >
+              Build agents.
+              <span className="mt-1 block text-violet-500">Understand every step.</span>
+            </motion.h1>
+            <motion.p
+              initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: reducedMotion ? 0 : 0.5, delay: reducedMotion ? 0 : 0.14, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-6 max-w-[54ch] text-base leading-relaxed text-slate-300 sm:text-lg"
+            >
+              Learn agent fundamentals, estimate local model fit, compare hosted APIs, and generate a commented starter project.
+            </motion.p>
+            <motion.div
+              initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: reducedMotion ? 0 : 0.45, delay: reducedMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-8 flex flex-wrap items-center gap-3"
+            >
+              <Link
+                to="/learn"
+                className="af-primary-btn btn-sheen group inline-flex min-h-12 items-center justify-center gap-3 whitespace-nowrap px-5 py-3 text-sm font-semibold transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 active:translate-y-px sm:px-6"
+              >
+                Start learning
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-black/10">
+                  <ArrowRight className="h-4 w-4 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+              <Link
+                to="/device"
+                className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap border border-white/15 px-5 py-3 text-sm font-medium text-white transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-cyan-500/60 hover:text-cyan-400 sm:px-6"
+              >
+                Check device fit
+              </Link>
             </motion.div>
           </div>
-          <motion.div style={{ y: yHero, opacity: opHero }} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 60, damping: 16, delay: 0.35 }}>
-            <HeroLoop />
+
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: reducedMotion ? 0 : 0.7, delay: reducedMotion ? 0 : 0.1, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <AgentMap />
           </motion.div>
         </div>
-
-        {/* live agent trace */}
-        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 60, damping: 16, delay: 1.2 }}
-          className="relative mx-auto mt-16 max-w-3xl">
-          <div className="absolute -inset-8 rounded-3xl bg-gradient-to-r from-violet-500/10 via-transparent to-cyan-400/10 blur-2xl" aria-hidden />
-          <AgentTrace />
-          <p className="mt-4 text-center text-xs text-slate-600">
-            This is the loop you'll build in lesson 10 — <span className="text-slate-400">your generated agent prints exactly this trace.</span>
-          </p>
-        </motion.div>
       </section>
 
-      {/* ── Ticker ── */}
-      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3, duration: 0.8 }}
-        className="space-y-3 border-y border-white/[0.05] bg-white/[0.015] py-6">
-        <Marquee speed={38}>
-          {LOCAL_MODELS.map((m) => (
-            <span key={m.id} className="dark-canvas flex items-center gap-2 rounded-full border border-white/[0.08] bg-[#0c0c1a] px-4 py-1.5 text-xs text-slate-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span className="font-semibold text-slate-200">{m.name}</span>
-              <span className="font-mono text-[10px] text-slate-400">{m.params} · runs locally</span>
-            </span>
-          ))}
-        </Marquee>
-        <Marquee speed={46} reverse>
-          {[...RUNTIMES.map((r) => r.name), ...API_PROVIDERS.map((p) => p.name)].map((n) => (
-            <span key={n} className="flex items-center gap-2 rounded-full border border-violet-400/[0.12] bg-violet-500/[0.04] px-4 py-1.5 text-xs text-slate-400">
-              <Boxes className="h-3 w-3 text-violet-400/70" />{n}
-            </span>
-          ))}
-        </Marquee>
-      </motion.section>
+      <section className="px-4 py-16 sm:px-6 lg:py-20" aria-labelledby="trace-title">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-14">
+          <HomeReveal>
+            <h2 id="trace-title" className="max-w-[12ch] font-display text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+              See a tool loop, step by step.
+            </h2>
+            <p className="mt-4 max-w-[52ch] text-sm leading-relaxed text-slate-400 sm:text-base">
+              This illustrative transcript shows one possible search-and-calculation flow. It is a sample, not a live model run.
+            </p>
+          </HomeReveal>
+          <HomeReveal delay={0.08}>
+            <AgentTrace />
+          </HomeReveal>
+        </div>
+      </section>
 
-      {/* ── Journey strip ── */}
-      <section className="px-4 py-16 sm:px-6">
+      <section className="border-y border-white/[0.08] bg-white/[0.015] px-4 py-8 sm:px-6" aria-label="Models and integrations">
         <div className="mx-auto max-w-7xl">
-          <Reveal>
-            <div className="panel grad-border relative overflow-hidden p-8 sm:p-10">
-              <div className="flex flex-wrap items-start gap-6">
-                <div className="max-w-xl">
-                  <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">One journey, zero to agent.</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-400">AgentForge chains five steps into a single guided flow. Your progress is saved as you go.</p>
-                </div>
+          {reducedMotion ? (
+            <div className="overflow-x-auto pb-2">
+              <div className="flex w-max items-center">{platformTicker}</div>
+            </div>
+          ) : (
+            <Marquee speed={42}>{platformTicker}</Marquee>
+          )}
+        </div>
+      </section>
+
+      <section className="px-4 py-20 sm:px-6 lg:py-28" aria-labelledby="journey-title">
+        <div className="mx-auto max-w-7xl">
+          <HomeReveal>
+            <div className="border-y border-white/10 py-8 sm:py-10">
+              <div className="max-w-2xl">
+                <h2 id="journey-title" className="font-display text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+                  From first principles to a starter project.
+                </h2>
+                <p className="mt-3 max-w-[60ch] text-sm leading-relaxed text-slate-400 sm:text-base">
+                  Follow the guided path, or use any section on its own. Your lesson and device-check progress is saved as you go.
+                </p>
               </div>
-              <Stagger className="mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-5" amount={0.3}>
-                {[
-                  { n: '01', t: 'Learn', d: 'How agents think', to: '/learn', icon: GraduationCap },
-                  { n: '02', t: 'Check', d: 'What your PC can run', to: '/device', icon: CircuitBoard },
-                  { n: '03', t: 'Choose', d: 'Local or API brain', to: '/brain', icon: Scale },
-                  { n: '04', t: 'Build', d: 'Configure your agent', to: '/builder', icon: Hammer },
-                  { n: '05', t: 'Run', d: 'Download real code', to: '/builder', icon: Terminal },
-                ].map((s, i) => (
-                  <StaggerItem key={s.n}>
-                    <Link to={s.to}
-                      className="shine group relative block h-full rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 transition hover:border-violet-400/30 hover:bg-white/[0.05]">
-                      <s.icon className="h-5 w-5 text-slate-500 transition group-hover:text-violet-300" />
-                      <div className="mt-3 font-mono text-[10px] tracking-widest text-slate-600">{s.n}</div>
-                      <div className="font-display text-base font-bold text-white">{s.t}</div>
-                      <div className="mt-0.5 text-xs text-slate-500">{s.d}</div>
-                      {i < 4 && (
-                        <motion.span animate={{ x: [0, 4, 0], opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.3 }}
-                          className="absolute -right-2.5 top-1/2 hidden -translate-y-1/2 text-slate-700 lg:block">
-                          <ArrowRight className="h-5 w-5" />
-                        </motion.span>
-                      )}
+              <HomeStagger className="mt-8 grid gap-x-6 gap-y-0 sm:grid-cols-2 lg:grid-cols-5" amount={0.2}>
+                {JOURNEY.map((step) => (
+                  <HomeStaggerItem key={step.title}>
+                    <Link
+                      to={step.to}
+                      className="group flex min-h-28 items-start gap-4 border-t border-white/10 py-5 transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-violet-500"
+                    >
+                      <step.icon className="mt-0.5 h-5 w-5 shrink-0 text-cyan-400 transition-colors duration-300 group-hover:text-violet-500" strokeWidth={1.6} />
+                      <span>
+                        <span className="block font-display text-base font-semibold text-white">{step.title}</span>
+                        <span className="mt-1 block text-xs leading-relaxed text-slate-500">{step.desc}</span>
+                      </span>
                     </Link>
-                  </StaggerItem>
+                  </HomeStaggerItem>
                 ))}
-              </Stagger>
+              </HomeStagger>
               {(done.length > 0 || device || agents.length > 0) && (
-                <div className="mt-6 flex justify-end">
-                  <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-5 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20">
+                <div className="mt-4 flex justify-end">
+                  <Link
+                    to="/dashboard"
+                    className="inline-flex items-center gap-2 border border-violet-500/40 px-4 py-2.5 text-sm font-semibold text-violet-500 transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-violet-500/10"
+                  >
                     Continue your journey <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
               )}
             </div>
-          </Reveal>
+          </HomeReveal>
         </div>
       </section>
 
-      {/* ── Pillars ── */}
-      <section className="px-4 py-16 sm:px-6">
+      <section className="px-4 py-20 sm:px-6 lg:py-28" aria-labelledby="platform-title">
         <div className="mx-auto max-w-7xl">
-          <SectionHead center index="01" kicker="The platform" title={<>Four tools, one <span className="grad-text">complete loop</span></>}
-            sub="Most tutorials make you copy code you don't understand. AgentForge teaches the concept, checks your machine, then helps you build — in that order." />
-          <Stagger className="grid gap-5 sm:grid-cols-2">
-            {PILLARS.map((p) => (
-              <StaggerItem key={p.title}>
-                <Tilt max={5}>
-                  <Link to={p.to} className="panel panel-hover shine group relative block overflow-hidden p-8">
-                    <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full opacity-[0.07] blur-2xl transition-opacity group-hover:opacity-[0.15]" style={{ background: p.color }} />
-                    <span className="grid h-12 w-12 place-items-center rounded-2xl border" style={{ background: p.color + '15', borderColor: p.color + '40', transform: 'translateZ(30px)' }}>
-                      <p.icon className="h-6 w-6" style={{ color: p.color }} />
-                    </span>
-                    <h3 className="mt-5 font-display text-xl font-bold text-white">{p.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-400">{p.desc}</p>
-                    <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold transition group-hover:gap-2.5" style={{ color: p.color }}>
-                      {p.cta} <ArrowRight className="h-4 w-4 transition-all" />
-                    </span>
-                  </Link>
-                </Tilt>
-              </StaggerItem>
-            ))}
-          </Stagger>
+          <HomeReveal className="mb-10 max-w-3xl sm:mb-12">
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-violet-500">The platform</p>
+            <h2 id="platform-title" className="font-display text-3xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">
+              Four practical parts. One place to learn and build.
+            </h2>
+            <p className="mt-4 max-w-[62ch] text-sm leading-relaxed text-slate-400 sm:text-base">
+              Study the concepts, compare model options, then work through a guided agent configuration.
+            </p>
+          </HomeReveal>
 
-          {/* stats */}
-          <Stagger className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-4" amount={0.4}>
-            {[
-              { v: LESSONS.length, s: '', label: 'guided lessons', color: '#8b5cf6' },
-              { v: LOCAL_MODELS.length, s: '', label: 'local models tracked', color: '#34d399' },
-              { v: RUNTIMES.length + API_PROVIDERS.length, s: '', label: 'runtimes & providers', color: '#22d3ee' },
-              { v: RESOURCE_CATEGORIES.reduce((n, c) => n + c.items.length, 0), s: '+', label: 'curated resources', color: '#fbbf24' },
-            ].map((st) => (
-              <StaggerItem key={st.label}>
-                <div className="panel p-6 text-center">
-                  <div className="font-display text-4xl font-bold" style={{ color: st.color }}>
-                    <Counter value={st.v} suffix={st.s} />
+          <HomeStagger className="grid gap-x-10 sm:grid-cols-2" amount={0.2}>
+            {PILLARS.map((pillar, index) => (
+              <HomeStaggerItem key={pillar.title}>
+                <Link
+                  to={pillar.to}
+                  className="group flex h-full min-h-56 flex-col border-t border-white/10 py-7 transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-violet-500 sm:py-8"
+                >
+                  <div className="flex items-center justify-between">
+                    <pillar.icon className={`h-6 w-6 ${index % 2 === 0 ? 'text-violet-500' : 'text-cyan-400'}`} strokeWidth={1.5} />
+                    <ArrowRight className="h-4 w-4 text-slate-600 transition-colors duration-300 group-hover:text-violet-500" />
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">{st.label}</div>
-                </div>
-              </StaggerItem>
+                  <h3 className="mt-7 font-display text-xl font-semibold tracking-tight text-white">{pillar.title}</h3>
+                  <p className="mt-2 max-w-[54ch] text-sm leading-relaxed text-slate-400">{pillar.desc}</p>
+                  <span className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-violet-500">
+                    {pillar.cta}
+                    <ArrowRight className="h-4 w-4 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              </HomeStaggerItem>
             ))}
-          </Stagger>
+          </HomeStagger>
+
+          <HomeStagger className="mt-10 grid grid-cols-2 border-y border-white/10 sm:grid-cols-4" amount={0.3}>
+            {[
+              { value: LESSONS.length, label: 'lessons' },
+              { value: LOCAL_MODELS.length, label: 'local model references' },
+              { value: RUNTIMES.length + API_PROVIDERS.length, label: 'runtimes and API providers' },
+              { value: RESOURCE_CATEGORIES.reduce((total, category) => total + category.items.length, 0), label: 'curated resources' },
+            ].map((stat, index) => (
+              <HomeStaggerItem key={stat.label}>
+                <div className={`border-r border-white/10 px-4 py-5 sm:px-6 sm:py-6 ${index % 2 === 1 ? 'border-r-0 sm:border-r' : ''} ${index === 3 ? 'sm:border-r-0' : ''}`}>
+                  <div className="font-display text-3xl font-semibold tabular-nums text-white sm:text-4xl">{stat.value}</div>
+                  <div className="mt-1 max-w-40 text-xs leading-relaxed text-slate-500">{stat.label}</div>
+                </div>
+              </HomeStaggerItem>
+            ))}
+          </HomeStagger>
         </div>
       </section>
 
-      {/* ── Learning preview ── */}
-      <section className="px-4 py-16 sm:px-6">
+      <section className="px-4 py-20 sm:px-6 lg:py-28" aria-labelledby="lessons-title">
         <div className="mx-auto max-w-7xl">
-          <SectionHead index="02" kicker="Curriculum" title="The 10-step learning path"
-            sub="Each lesson is 5–8 minutes, ends with a 2-question check, and builds directly toward the agent you'll ship in lesson 10." />
-          <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {LESSONS.map((l, i) => {
-              const doneIt = done.includes(l.id);
+          <HomeReveal className="mb-10 max-w-3xl sm:mb-12">
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-violet-500">Learning path</p>
+            <h2 id="lessons-title" className="font-display text-3xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">
+              Learn what goes into an agent.
+            </h2>
+            <p className="mt-4 max-w-[62ch] text-sm leading-relaxed text-slate-400 sm:text-base">
+              Ten short lessons cover architecture, models, tools, memory, retrieval, and planning. Each lesson has a knowledge check.
+            </p>
+          </HomeReveal>
+          <HomeStagger className="grid gap-x-6 sm:grid-cols-2 lg:grid-cols-5" amount={0.15}>
+            {LESSONS.map((lesson, index) => {
+              const lessonDone = done.includes(lesson.id);
+
               return (
-                <StaggerItem key={l.id}>
-                  <Link to={`/learn/${l.id}`} className="panel panel-hover group flex h-full flex-col p-5">
+                <HomeStaggerItem key={lesson.id}>
+                  <Link
+                    to={`/learn/${lesson.id}`}
+                    className="group flex h-full min-h-36 flex-col border-t border-white/10 py-4 transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-violet-500"
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold tracking-widest" style={{ color: l.accent }}>{String(i + 1).padStart(2, '0')}</span>
-                      {doneIt
-                        ? <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14 }}><CheckCircle2 className="h-4 w-4 text-emerald-400" /></motion.span>
-                        : <span className="text-[10px] text-slate-600">{l.minutes} min</span>}
+                      <span className="font-mono text-xs tabular-nums text-cyan-400">{String(index + 1).padStart(2, '0')}</span>
+                      {lessonDone
+                        ? <CheckCircle2 aria-label="Completed" className="h-4 w-4 text-cyan-400" />
+                        : <span className="text-[10px] text-slate-600">{lesson.minutes} min</span>}
                     </div>
-                    <div className="mt-3 line-clamp-2 font-display text-sm font-bold leading-snug text-white group-hover:text-violet-200">{l.title}</div>
-                    <div className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{l.subtitle}</div>
+                    <span className="mt-3 font-display text-sm font-semibold leading-snug text-white transition-colors duration-300 group-hover:text-violet-500">
+                      {formatHomepageCopy(lesson.title)}
+                    </span>
+                    <span className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{formatHomepageCopy(lesson.subtitle)}</span>
                   </Link>
-                </StaggerItem>
+                </HomeStaggerItem>
               );
             })}
-          </Stagger>
-          <Reveal className="mt-8 text-center">
-            <Link to="/learn" className="inline-flex items-center gap-2 text-sm font-semibold text-violet-300 hover:text-violet-200">
+          </HomeStagger>
+          <HomeReveal className="mt-8">
+            <Link to="/learn" className="inline-flex items-center gap-2 text-sm font-semibold text-violet-500 transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-white">
               Open the full learning path <ArrowRight className="h-4 w-4" />
             </Link>
-          </Reveal>
+          </HomeReveal>
         </div>
       </section>
 
-      {/* ── Why different ── */}
-      <section className="px-4 py-16 sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <Stagger className="grid gap-5 lg:grid-cols-3">
-            {[
-              { icon: Shield, color: '#34d399', t: 'Privacy-first mindset', d: 'We teach you to run models on your own machine when it matters — your files never need to leave your desk.' },
-              { icon: Zap, color: '#fbbf24', t: 'Concepts before code', d: 'Every generated file comes with a plain-English explanation of what it does and why it exists. No copy-paste learning.' },
-              { icon: Route, color: '#22d3ee', t: 'Honest hardware advice', d: 'No “just buy a 4090”. The advisor matches YOUR actual RAM, VRAM and disk to models that will genuinely run.' },
-            ].map((x) => (
-              <StaggerItem key={x.t}>
-                <div className="panel h-full p-7">
-                  <motion.span whileHover={{ rotate: -12, scale: 1.15 }} transition={{ type: 'spring', stiffness: 300, damping: 12 }} className="inline-block">
-                    <x.icon className="h-6 w-6" style={{ color: x.color }} />
-                  </motion.span>
-                  <h3 className="mt-4 font-display text-lg font-bold text-white">{x.t}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-400">{x.d}</p>
-                </div>
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </div>
-      </section>
-
-      {/* ── Final CTA ── */}
-      <section className="px-4 py-20 sm:px-6">
-        <Reveal>
-          <div className="grad-border relative mx-auto max-w-4xl overflow-hidden p-10 text-center sm:p-16">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.14),transparent_60%)]" />
-            <MousePointerClick className="mx-auto h-8 w-8 text-violet-300" />
-            <h2 className="relative mt-5 font-display text-3xl font-bold text-white sm:text-4xl">
-              Your first agent is <span className="grad-text">10 minutes away</span>
+      <section className="px-4 py-20 sm:px-6 lg:py-28" aria-label="How AgentForge approaches agent building">
+        <div className="mx-auto grid max-w-7xl gap-x-14 lg:grid-cols-[0.8fr_1.2fr]">
+          <HomeReveal className="mb-8 lg:mb-0">
+            <h2 className="max-w-[10ch] font-display text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+              Built around clear choices.
             </h2>
-            <p className="relative mx-auto mt-4 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base">
-              Start with lesson one — or jump straight into the builder and learn as you configure. Either way, you’ll understand every line you ship.
-            </p>
-            <div className="relative mt-8 flex flex-wrap justify-center gap-4">
-              <Magnetic>
-                <Link to="/learn" className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-400 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 transition hover:brightness-110">
-                  <GraduationCap className="h-4.5 w-4.5" /> Begin the path
+          </HomeReveal>
+          <HomeStagger className="grid gap-x-8 sm:grid-cols-3" amount={0.2}>
+            {REASONS.map((reason, index) => (
+              <HomeStaggerItem key={reason.title}>
+                <article className="h-full border-t border-white/10 py-5 sm:py-6">
+                  <reason.icon className={`h-5 w-5 ${index === 1 ? 'text-cyan-400' : 'text-violet-500'}`} strokeWidth={1.5} />
+                  <h3 className="mt-5 font-display text-base font-semibold text-white">{reason.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-400">{reason.desc}</p>
+                </article>
+              </HomeStaggerItem>
+            ))}
+          </HomeStagger>
+        </div>
+      </section>
+
+      <section className="px-4 pb-24 pt-12 sm:px-6 lg:pb-32" aria-labelledby="closing-title">
+        <HomeReveal>
+          <div className="relative mx-auto max-w-7xl overflow-hidden border-y border-violet-500/35 bg-[var(--surface-panel)] px-6 py-12 sm:px-10 sm:py-16">
+            <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(ellipse_at_90%_50%,rgba(255,120,61,0.09),transparent_66%)]" />
+            <div className="relative max-w-3xl">
+              <h2 id="closing-title" className="font-display text-3xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">
+                Start with the idea. Leave with a project to inspect.
+              </h2>
+              <p className="mt-4 max-w-[62ch] text-sm leading-relaxed text-slate-400 sm:text-base">
+                Follow the lessons, or open the builder to configure a starter project and learn as you go.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link
+                  to="/learn"
+                  className="af-primary-btn btn-sheen group inline-flex min-h-12 items-center justify-center gap-3 whitespace-nowrap px-5 py-3 text-sm font-semibold transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 active:translate-y-px"
+                >
+                  Begin the path
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-black/10">
+                    <ArrowRight className="h-4 w-4 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-0.5" />
+                  </span>
                 </Link>
-              </Magnetic>
-              <Magnetic>
-                <Link to="/builder" className="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.03] px-7 py-3.5 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.07]">
-                  <Workflow className="h-4.5 w-4.5 text-cyan-300" /> Skip to builder
+                <Link
+                  to="/builder"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap border border-white/15 px-5 py-3 text-sm font-medium text-white transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-cyan-500/60 hover:text-cyan-400"
+                >
+                  <Workflow className="h-4 w-4 text-cyan-400" strokeWidth={1.5} />
+                  Skip to builder
                 </Link>
-              </Magnetic>
+              </div>
             </div>
           </div>
-        </Reveal>
+        </HomeReveal>
       </section>
     </div>
   );

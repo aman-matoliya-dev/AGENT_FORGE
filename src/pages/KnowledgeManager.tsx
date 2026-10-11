@@ -78,7 +78,7 @@ export default function KnowledgeManager() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-12 sm:px-6">
-      <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-8 shadow-2xl shadow-violet-950/30">
+      <div className="rounded-3xl border border-white/10 bg-[var(--surface-panel)] p-8 shadow-2xl shadow-violet-950/30">
         <div className="mb-6 flex items-center gap-3">
           <BookOpen className="h-8 w-8 text-violet-300" />
           <div>
@@ -92,7 +92,7 @@ export default function KnowledgeManager() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="rounded-2xl border border-white/10 bg-slate-900/60 p-6">
+        <section className="rounded-2xl border border-white/10 bg-[var(--surface-panel)] p-6">
           <div className="mb-4 flex items-center gap-2 text-violet-200">
             <Upload className="h-5 w-5" />
             <h2 className="text-xl font-semibold text-white">Upload</h2>
@@ -104,7 +104,7 @@ export default function KnowledgeManager() {
               <input id="knowledge-upload" aria-labelledby="knowledge-upload-label" type="file" accept=".txt,.pdf" className="sr-only" onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} />
             </label>
             <button
-              className="knowledge-upload-button w-full rounded-xl bg-violet-700 px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+              className="af-primary-btn knowledge-upload-button w-full px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               onClick={handleUpload}
               disabled={uploading || !selectedFile}
             >
@@ -113,7 +113,7 @@ export default function KnowledgeManager() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-slate-900/60 p-6">
+        <section className="rounded-2xl border border-white/10 bg-[var(--surface-panel)] p-6">
           <div className="mb-4 flex items-center gap-2 text-cyan-200">
             <Database className="h-5 w-5" />
             <h2 className="text-xl font-semibold text-white">Status</h2>
@@ -131,7 +131,7 @@ export default function KnowledgeManager() {
         </section>
       </div>
 
-      <section className="rounded-2xl border border-white/10 bg-slate-900/60 p-6">
+      <section className="rounded-2xl border border-white/10 bg-[var(--surface-panel)] p-6">
         <div className="mb-4 flex items-center gap-2 text-emerald-200">
           <Search className="h-5 w-5" />
           <h2 className="text-xl font-semibold text-white">Search</h2>
@@ -142,7 +142,7 @@ export default function KnowledgeManager() {
             onChange={(event) => setSearchQuery(event.target.value)}
             aria-label="Search uploaded knowledge"
             placeholder="Ask a question about your uploaded knowledge…"
-            className="knowledge-search flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-200 outline-none ring-0 placeholder:text-slate-400"
+            className="knowledge-search flex-1 rounded-xl border border-white/10 bg-[var(--surface-raised)] px-4 py-3 text-slate-200 outline-none ring-0 placeholder:text-slate-400"
           />
           <button
             onClick={handleSearch}
@@ -156,7 +156,7 @@ export default function KnowledgeManager() {
         <div className="mt-5 space-y-4">
           {searchResults.length > 0 ? (
             searchResults.map((result) => (
-              <div key={`${result.documentId}-${result.chunkId}`} className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
+              <div key={`${result.documentId}-${result.chunkId}`} className="rounded-xl border border-white/10 bg-[var(--surface-raised)] p-4">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.18em] text-slate-400">
                   <span>{result.filename}</span>
                   <span>page {result.page ?? 1}</span>
@@ -171,7 +171,7 @@ export default function KnowledgeManager() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-slate-900/60 p-6">
+      <section className="rounded-2xl border border-white/10 bg-[var(--surface-panel)] p-6">
         <div className="mb-4 flex items-center gap-2 text-amber-200">
           <FileText className="h-5 w-5" />
           <h2 className="text-xl font-semibold text-white">Indexed documents</h2>
@@ -181,7 +181,7 @@ export default function KnowledgeManager() {
             <p className="text-sm text-slate-400">No documents indexed yet.</p>
           ) : (
             documents.map((doc) => (
-              <div key={doc.documentId} className="flex flex-col gap-3 rounded-xl border border-white/10 bg-slate-950/50 p-4 md:flex-row md:items-center md:justify-between">
+              <div key={doc.documentId} className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[var(--surface-raised)] p-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="font-medium text-white">{doc.filename}</div>
                   <div className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">
@@ -189,7 +189,7 @@ export default function KnowledgeManager() {
                   </div>
                 </div>
                 <button
-                  className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+                  className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-rose-200"
                   onClick={() => void handleDelete(doc.documentId)}
                 >
                   <Trash2 className="h-4 w-4" /> Delete

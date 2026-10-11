@@ -442,21 +442,23 @@ export default function Builder() {
       </div>
 
       {/* stepper */}
-      <div className="mb-10 flex items-center gap-1 overflow-x-auto no-scrollbar pb-1">
+      <div className="mb-10 grid grid-cols-4 gap-2 pb-1 no-scrollbar xl:flex xl:items-center xl:gap-1 xl:overflow-x-auto" role="group" aria-label="Agent setup steps">
         {STEPS.map((s, i) => {
           const Icon = s.icon;
           const done = i < step;
           const active = i === step;
           return (
-            <div key={s.id} className="flex shrink-0 items-center">
+            <div key={s.id} className="flex min-w-0 items-center justify-center xl:shrink-0">
               {i > 0 && (
-                <div className="relative mx-1 h-px w-5 overflow-hidden bg-white/10 sm:w-8">
+                <div className="relative mx-1 hidden h-px w-5 overflow-hidden bg-white/10 xl:block xl:w-8">
                   <motion.span className="absolute inset-0 origin-left bg-gradient-to-r from-violet-500 to-cyan-400"
                     initial={false} animate={{ scaleX: i <= step ? 1 : 0 }}
                     transition={{ type: 'spring', stiffness: 220, damping: 28 }} />
                 </div>
               )}
               <button onClick={() => i < step && goTo(i)} disabled={i > step}
+                aria-label={`Step ${i + 1}: ${s.label}`}
+                aria-current={active ? 'step' : undefined}
                 className={cn('group relative flex items-center gap-2 rounded-full border px-3 py-2 transition-all',
                   active ? 'border-violet-400/60 bg-violet-500/15 tick-ring' : done ? 'border-violet-400/25 bg-violet-500/[0.06] hover:bg-violet-500/10' : 'border-white/10 opacity-50')}>
                 <motion.span layout
