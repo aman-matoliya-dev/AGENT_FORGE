@@ -98,12 +98,13 @@ export default function KnowledgeManager() {
             <h2 className="text-xl font-semibold text-white">Upload</h2>
           </div>
           <div className="space-y-4">
-            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-violet-500/40 bg-violet-500/5 px-4 py-3 text-sm text-slate-200">
-              <span>{selectedFile ? selectedFile.name : 'Choose a .txt or .pdf file'}</span>
-              <input type="file" accept=".txt,.pdf" className="hidden" onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} />
+            <label htmlFor="knowledge-upload" className="flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-violet-500/40 bg-violet-500/5 px-4 py-3 text-sm text-slate-200 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-violet-500">
+              <span id="knowledge-upload-label">Choose a .txt or .pdf file</span>
+              {selectedFile && <span className="ml-3 truncate">{selectedFile.name}</span>}
+              <input id="knowledge-upload" aria-labelledby="knowledge-upload-label" type="file" accept=".txt,.pdf" className="sr-only" onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} />
             </label>
             <button
-              className="w-full rounded-xl bg-violet-500 px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="knowledge-upload-button w-full rounded-xl bg-violet-700 px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               onClick={handleUpload}
               disabled={uploading || !selectedFile}
             >
@@ -139,8 +140,9 @@ export default function KnowledgeManager() {
           <input
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
+            aria-label="Search uploaded knowledge"
             placeholder="Ask a question about your uploaded knowledge…"
-            className="flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-200 outline-none ring-0 placeholder:text-slate-500"
+            className="knowledge-search flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-200 outline-none ring-0 placeholder:text-slate-400"
           />
           <button
             onClick={handleSearch}

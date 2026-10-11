@@ -74,6 +74,7 @@ export default function Builder() {
   const [downloading, setDownloading] = useState(false);
   const [testMessage, setTestMessage] = useState('');
   const [testResponse, setTestResponse] = useState('');
+  const [testUnavailableTools, setTestUnavailableTools] = useState<string[]>([]);
   const [testingAgent, setTestingAgent] = useState(false);
   const [testError, setTestError] = useState('');
   const [conversationId, setConversationId] = useState<string>();
@@ -117,6 +118,7 @@ export default function Builder() {
     setFileIdx(0);
     setTestMessage('');
     setTestResponse('');
+    setTestUnavailableTools([]);
     setTestError('');
     setConversationId(undefined);
     setTestMetadata('');
@@ -129,6 +131,7 @@ export default function Builder() {
     if (!savedAgent || !testMessage.trim() || testingAgent) return;
 
     setTestResponse('');
+    setTestUnavailableTools([]);
     setTestError('');
 
     const provider = savedAgent.brain === 'local'
@@ -167,6 +170,7 @@ export default function Builder() {
       });
 
       setTestResponse(result.response);
+      setTestUnavailableTools(result.unavailable ?? []);
       setConversationId(result.conversationId);
       setTestSources(result.sources ?? []);
       setTestMetadata(result.metadata
@@ -333,6 +337,11 @@ export default function Builder() {
               <div className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">
                 {testResponse}
               </div>
+              {testUnavailableTools.length > 0 && (
+                <p role="status" className="mt-4 rounded-lg border border-cyan-400/15 bg-cyan-400/[0.04] p-3 text-sm text-cyan-100/90">
+                  These tools were not available during this run and were not executed: {testUnavailableTools.join(', ')}.
+                </p>
+              )}
               {testMetadata && (
                 <div className="mt-3 text-xs text-slate-500">
                   {testMetadata} · conversation: {conversationId}
