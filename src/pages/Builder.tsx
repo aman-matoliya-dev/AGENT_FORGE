@@ -80,6 +80,7 @@ export default function Builder() {
   const [conversationId, setConversationId] = useState<string>();
   const [testMetadata, setTestMetadata] = useState('');
   const [testSources, setTestSources] = useState<KnowledgeSource[]>([]);
+  const [testKnowledgeError, setTestKnowledgeError] = useState('');
   const [savingAgent, setSavingAgent] = useState(false);
   const [saveAgentError, setSaveAgentError] = useState('');
 
@@ -120,10 +121,10 @@ export default function Builder() {
     setTestResponse('');
     setTestUnavailableTools([]);
     setTestError('');
+    setTestKnowledgeError('');
     setConversationId(undefined);
     setTestMetadata('');
     setTestSources([]);
-    setTestMetadata('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -133,6 +134,7 @@ export default function Builder() {
     setTestResponse('');
     setTestUnavailableTools([]);
     setTestError('');
+    setTestKnowledgeError('');
 
     const provider = savedAgent.brain === 'local'
       ? 'ollama'
@@ -173,6 +175,7 @@ export default function Builder() {
       setTestUnavailableTools(result.unavailable ?? []);
       setConversationId(result.conversationId);
       setTestSources(result.sources ?? []);
+      setTestKnowledgeError(result.metadata?.knowledgeError ?? '');
       setTestMetadata(result.metadata
         ? `${result.metadata.provider} · ${result.metadata.model} · memory: ${result.metadata.memory} · knowledge: ${result.metadata.knowledgeUsed ? 'used' : 'not used'} · tools: ${result.metadata.toolsUsed.join(', ') || 'none'}`
         : '');
@@ -327,6 +330,12 @@ export default function Builder() {
               <div className="font-semibold">Agent request failed</div>
               <p className="mt-1 text-rose-200/80">{testError}</p>
             </div>
+          )}
+
+          {testKnowledgeError && (
+            <p role="status" className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4 text-sm text-amber-100">
+              Knowledge retrieval was unavailable: {testKnowledgeError}
+            </p>
           )}
 
           {testResponse && (
@@ -663,8 +672,8 @@ export default function Builder() {
           {STEPS[step].id === 'memory' && (
             <StepShell title="How should it remember?" sub="Models are stateless — memory is your design choice."
               why="Why this matters: after answering, a model forgets everything. Your code re-sends history each call — and the context window is finite. The strategy you pick decides what survives long conversations, and it directly changes the memory code we generate for you.">
-              <Stagger className="grid gap-3 sm:grid-cols-3">
-                {MEMORY_OPTIONS.map((m) => (
+              <Stagger className="grid gap-3 sm:grid-cols-2">
+                {MEMORY_OPTIONS.filter((m) => m.id !== 'summary').map((m) => (
                   <StaggerItem key={m.id}>
                     <Tilt max={4} className="h-full">
                       <button onClick={() => set({ memory: m.id })}

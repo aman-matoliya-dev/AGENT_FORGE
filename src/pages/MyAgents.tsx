@@ -92,7 +92,7 @@ export default function MyAgents() {
       model: agent.model ?? '',
       agentType: agent.agentType ?? 'general',
       tools: agent.tools ?? [],
-      memory: agent.memory ?? 'buffer',
+      memory: agent.memory === 'summary' ? 'buffer' : agent.memory ?? 'buffer',
       knowledge: agent.knowledge ?? 'none',
       outputStyle: agent.outputStyle ?? 'concise',
     });

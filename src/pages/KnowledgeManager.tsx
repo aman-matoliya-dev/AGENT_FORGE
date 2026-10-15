@@ -87,7 +87,7 @@ export default function KnowledgeManager() {
           </div>
         </div>
         <p className="max-w-2xl text-sm leading-relaxed text-slate-400">
-          Upload a PDF or TXT file to build a local knowledge index. This is a retrieval foundation only — it does not yet feed agent answers automatically.
+          Agents configured to use RAG retrieve relevant context from these documents. Uploaded text and search queries are sent to Google&apos;s embedding API to create embeddings.
         </p>
       </div>
 

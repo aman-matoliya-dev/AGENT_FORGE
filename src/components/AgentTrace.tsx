@@ -17,11 +17,8 @@ const TAG_STYLE: Record<TraceLine['tag'], { color: string; label: string }> = {
 };
 
 const SCRIPT: TraceLine[] = [
-  { tag: 'you',    text: 'What is 18% of a product priced at $120?' },
-  { tag: 'think',  text: 'Find a sample price, then calculate the percentage.' },
-  { tag: 'act',    text: 'web_search("sample product price")' },
-  { tag: 'obs',    text: 'Sample result: a product costs $120.' },
-  { tag: 'think',  text: 'Use the calculator to find 18% of the sample price.' },
+  { tag: 'you',    text: 'What is 18% of $120?' },
+  { tag: 'think',  text: 'Calculate 18% of the given amount.' },
   { tag: 'act',    text: 'calculator("120 * 0.18")' },
   { tag: 'obs',    text: '$21.60' },
   { tag: 'answer', text: '18% of $120 is $21.60.' },
@@ -53,7 +50,7 @@ export default function AgentTrace() {
   const visibleLines = reducedMotion ? SCRIPT : SCRIPT.slice(0, line);
 
   return (
-    <figure className="codeblock relative overflow-hidden" aria-label="Illustrative sample of an agent using search and calculator tools">
+    <figure className="codeblock relative overflow-hidden" aria-label="Illustrative sample of an agent using the calculator tool">
       {/* window chrome */}
       <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2.5">
         <div className="flex items-center gap-2">
