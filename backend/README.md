@@ -22,6 +22,16 @@
 
 Only Gemini and Ollama are live providers. Gemini models are allowlisted and
 Ollama receives the selected model tag. Calculator and date-time are
-deterministic safe tools. Notes, web search, persistent memory, and RAG are
+deterministic safe tools. Notes, web search, and persistent memory are
 currently unavailable and are explicitly reported rather than simulated.
+RAG is supported for agents configured with knowledge mode `rag`, using the
+knowledge endpoints:
+
+- `POST /api/knowledge/upload`
+- `GET /api/knowledge/documents`
+- `POST /api/knowledge/search`
+- `DELETE /api/knowledge/documents/{document_id}`
+- `GET /api/knowledge/status`
+
+Uploaded document text and search queries are sent to Google's embedding API.
 `agentType` is metadata; analytics remain separate from runtime capabilities.

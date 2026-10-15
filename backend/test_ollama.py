@@ -1,11 +1,31 @@
-from backend.app.models.services.ollama_service import ask_ollama
+import unittest
+from unittest.mock import Mock, patch
+
+from app.services import ollama_service
 
 
-question = "Explain Python lists in simple words."
+class OllamaServiceTests(unittest.TestCase):
+    @patch("app.services.ollama_service.requests.post")
+    def test_ask_ollama_posts_message_and_returns_response(self, post):
+        response = Mock()
+        response.json.return_value = {"message": {"content": "Hello from Ollama."}}
+        post.return_value = response
 
-answer = ask_ollama(question)
+        result = ollama_service.ask_ollama("Hello", model="test-model")
 
-print("\n==============================")
-print("AGENT_FORGE AI RESPONSE")
-print("==============================")
-print(answer)
+        self.assertEqual(result, "Hello from Ollama.")
+        post.assert_called_once_with(
+            ollama_service.OLLAMA_URL,
+            json={
+                "model": "test-model",
+                "messages": [{"role": "user", "content": "Hello"}],
+                "stream": False,
+                "options": {"num_predict": 256, "temperature": 0.7},
+            },
+            timeout=120,
+        )
+        response.raise_for_status.assert_called_once_with()
+
+
+if __name__ == "__main__":
+    unittest.main()
