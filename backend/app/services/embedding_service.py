@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Sequence
 
@@ -5,6 +6,7 @@ from google import genai
 from google.genai import types
 
 DEFAULT_MODEL = os.environ.get("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
+logger = logging.getLogger(__name__)
 
 
 def _get_client() -> genai.Client:
@@ -36,10 +38,8 @@ def embed_text(text: str, *, task_type: str = "RETRIEVAL_DOCUMENT") -> list[floa
             config=types.EmbedContentConfig(task_type=task_type),
         )
     except Exception as exc:
-        model_name = _resolve_model()
-        raise RuntimeError(
-            f"Embedding model '{model_name}' is incompatible with the current Google GenAI SDK/environment: {exc}"
-        ) from exc
+        logger.exception("Embedding provider request failed.")
+        raise RuntimeError("Embedding request failed.") from exc
 
     embeddings = response.embeddings or []
     if not embeddings or not embeddings[0].values:
@@ -53,19 +53,24 @@ def embed_texts(texts: Sequence[str], *, task_type: str = "RETRIEVAL_DOCUMENT") 
         return []
 
     client = _get_client()
-    try:
-        response = client.models.embed_content(
-            model=_resolve_model(),
-            contents=cleaned,
-            config=types.EmbedContentConfig(task_type=task_type),
-        )
-    except Exception as exc:
-        model_name = _resolve_model()
-        raise RuntimeError(
-            f"Embedding model '{model_name}' is incompatible with the current Google GenAI SDK/environment: {exc}"
-        ) from exc
+    vectors = []
+    for start in range(0, len(cleaned), 50):
+        batch = cleaned[start:start + 50]
+        try:
+            response = client.models.embed_content(
+                model=_resolve_model(),
+                contents=batch,
+                config=types.EmbedContentConfig(task_type=task_type),
+            )
+        except Exception as exc:
+            logger.exception("Embedding provider request failed.")
+            raise RuntimeError("Embedding request failed.") from exc
 
-    embeddings = response.embeddings or []
-    if len(embeddings) != len(cleaned):
+        embeddings = response.embeddings or []
+        if len(embeddings) != len(batch):
+            raise RuntimeError("The embedding response did not include one vector per input text.")
+        vectors.extend(list(item.values or []) for item in embeddings)
+
+    if len(vectors) != len(cleaned):
         raise RuntimeError("The embedding response did not include one vector per input text.")
-    return [list(item.values or []) for item in embeddings]
+    return vectors

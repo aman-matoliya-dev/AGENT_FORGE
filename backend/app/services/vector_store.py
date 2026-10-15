@@ -1,12 +1,16 @@
 import json
 import tempfile
-from threading import Lock
+from threading import RLock
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-_index_lock = Lock()
+_index_lock = RLock()
+
+
+class KnowledgeIndexError(RuntimeError):
+    pass
 
 
 class LocalVectorStore:
@@ -27,8 +31,8 @@ class LocalVectorStore:
             if not content.strip():
                 return {}
             return json.loads(content)
-        except json.JSONDecodeError:
-            return {}
+        except json.JSONDecodeError as exc:
+            raise KnowledgeIndexError("Knowledge index contains invalid JSON.") from exc
 
     def _write_index(self, index: dict[str, dict[str, Any]]) -> None:
         temporary_path = None
@@ -126,10 +130,11 @@ class LocalVectorStore:
         for path in sorted(self.vectors_dir.glob("*.json")):
             try:
                 payload = json.loads(path.read_text(encoding="utf-8"))
-            except (TypeError, ValueError):
+            except (OSError, TypeError, ValueError):
                 continue
             for item in payload:
-                if item.get("documentId") not in indexed_document_ids:
+                metadata = indexed_document_ids.get(item.get("documentId"))
+                if metadata is None or metadata.get("status", "indexed") != "indexed":
                     continue
                 vec = np.asarray(item.get("embedding") or [], dtype=float)
                 if vec.size == 0:
@@ -155,20 +160,23 @@ class LocalVectorStore:
             index = self._load_index()
             if document_id not in index:
                 return False
-            del index[document_id]
+
+            index[document_id]["status"] = "deleting"
             self._write_index(index)
 
             for path in (
-                self._document_meta_path(document_id),
                 self._vector_path(document_id),
                 self._chunk_path(document_id),
+                self._document_meta_path(document_id),
             ):
-                if path.exists():
-                    path.unlink()
+                path.unlink(missing_ok=True)
 
             for file_path in self.documents_dir.glob(f"{document_id}.*"):
-                if file_path.exists():
-                    file_path.unlink()
+                file_path.unlink(missing_ok=True)
+
+            latest_index = self._load_index()
+            latest_index.pop(document_id, None)
+            self._write_index(latest_index)
             return True
 
     def status(self) -> dict[str, Any]:
@@ -183,10 +191,9 @@ class LocalVectorStore:
             except (TypeError, ValueError):
                 continue
             chunks += len(payload)
-        env_path = Path(__file__).resolve().parents[2] / ".env"
         return {
             "documents": documents,
             "chunks": chunks,
             "vectorStore": "local",
-            "embeddingConfigured": bool(os.environ.get("GEMINI_API_KEY") or env_path.exists()),
+            "embeddingConfigured": bool(os.environ.get("GEMINI_API_KEY")),
         }

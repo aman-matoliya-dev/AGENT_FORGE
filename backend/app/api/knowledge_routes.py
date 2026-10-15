@@ -1,9 +1,15 @@
+import logging
+
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.models.knowledge_models import KnowledgeSearchRequest
 from app.services.knowledge import MAX_UPLOAD_BYTES, knowledge_service
+from app.services.vector_store import KnowledgeIndexError
 
 router = APIRouter(prefix="/api/knowledge", tags=["Knowledge"])
+logger = logging.getLogger(__name__)
+
+
 @router.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
     if not file.filename:
@@ -19,6 +25,12 @@ async def upload_document(file: UploadFile = File(...)):
         result = knowledge_service.upload_document(file.filename, content, content_type=file.content_type)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except KnowledgeIndexError as exc:
+        logger.exception("Failed to read knowledge index")
+        raise HTTPException(
+            status_code=500,
+            detail="The knowledge index could not be read. Please contact the administrator.",
+        ) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -27,7 +39,14 @@ async def upload_document(file: UploadFile = File(...)):
 
 @router.get("/documents")
 def list_documents():
-    return {"success": True, "documents": knowledge_service.list_documents()}
+    try:
+        return {"success": True, "documents": knowledge_service.list_documents()}
+    except KnowledgeIndexError as exc:
+        logger.exception("Failed to read knowledge index")
+        raise HTTPException(
+            status_code=500,
+            detail="The knowledge index could not be read. Please contact the administrator.",
+        ) from exc
 
 
 @router.post("/search")
@@ -36,6 +55,12 @@ def search_documents(payload: KnowledgeSearchRequest):
         return knowledge_service.search(payload.query, top_k=payload.top_k)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except KnowledgeIndexError as exc:
+        logger.exception("Failed to read knowledge index")
+        raise HTTPException(
+            status_code=500,
+            detail="The knowledge index could not be read. Please contact the administrator.",
+        ) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -44,10 +69,29 @@ def search_documents(payload: KnowledgeSearchRequest):
 def delete_document(document_id: str):
     try:
         return knowledge_service.delete_document(document_id)
+    except KnowledgeIndexError as exc:
+        logger.exception("Failed to read knowledge index")
+        raise HTTPException(
+            status_code=500,
+            detail="The knowledge index could not be read. Please contact the administrator.",
+        ) from exc
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except OSError as exc:
+        logger.exception("Failed to delete knowledge document")
+        raise HTTPException(
+            status_code=500,
+            detail="The knowledge document could not be deleted. Please try again.",
+        ) from exc
 
 
 @router.get("/status")
 def knowledge_status():
-    return knowledge_service.status()
+    try:
+        return knowledge_service.status()
+    except KnowledgeIndexError as exc:
+        logger.exception("Failed to read knowledge index")
+        raise HTTPException(
+            status_code=500,
+            detail="The knowledge index could not be read. Please contact the administrator.",
+        ) from exc
