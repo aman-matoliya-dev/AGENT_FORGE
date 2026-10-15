@@ -30,7 +30,12 @@ class LocalVectorStore:
             content = self.index_path.read_text(encoding="utf-8")
             if not content.strip():
                 return {}
-            return json.loads(content)
+            index = json.loads(content)
+            if not isinstance(index, dict) or any(
+                not isinstance(metadata, dict) for metadata in index.values()
+            ):
+                raise KnowledgeIndexError("Knowledge index has an invalid structure.")
+            return index
         except json.JSONDecodeError as exc:
             raise KnowledgeIndexError("Knowledge index contains invalid JSON.") from exc
 
@@ -132,11 +137,23 @@ class LocalVectorStore:
                 payload = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, TypeError, ValueError):
                 continue
+            if not isinstance(payload, list):
+                continue
             for item in payload:
-                metadata = indexed_document_ids.get(item.get("documentId"))
+                if not isinstance(item, dict):
+                    continue
+                document_id = item.get("documentId")
+                if not isinstance(document_id, str):
+                    continue
+                metadata = indexed_document_ids.get(document_id)
                 if metadata is None or metadata.get("status", "indexed") != "indexed":
                     continue
-                vec = np.asarray(item.get("embedding") or [], dtype=float)
+                try:
+                    vec = np.asarray(item.get("embedding") or [], dtype=float)
+                except (TypeError, ValueError):
+                    continue
+                if vec.ndim != 1 or vec.size != q.size:
+                    continue
                 if vec.size == 0:
                     continue
                 doc_norm = np.linalg.norm(vec)

@@ -94,6 +94,17 @@ class KnowledgeFoundationTests(unittest.TestCase):
 
             self.assertEqual(store.index_path.read_bytes(), original_content)
 
+    def test_vector_store_rejects_non_object_index_without_changing_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = LocalVectorStore(tmpdir)
+            original_content = b"[]"
+            store.index_path.write_bytes(original_content)
+
+            with self.assertRaisesRegex(KnowledgeIndexError, "invalid structure"):
+                store._load_index()
+
+            self.assertEqual(store.index_path.read_bytes(), original_content)
+
     def test_vector_store_empty_or_missing_index_is_empty(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             store = LocalVectorStore(tmpdir)
@@ -197,6 +208,23 @@ class KnowledgeFoundationTests(unittest.TestCase):
             )
 
             self.assertEqual(store.search([1.0, 0.0]), [])
+
+    def test_vector_store_search_skips_malformed_vector_payload(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = LocalVectorStore(tmpdir)
+            store.add_document(
+                "indexed",
+                {"documentId": "indexed", "filename": "indexed.txt", "status": "indexed"},
+                [{"chunk_id": "indexed-chunk", "text": "valid indexed content"}],
+                [[1.0, 0.0]],
+            )
+            store._vector_path("malformed").write_text(
+                '{"not-a-vector-list": true}', encoding="utf-8"
+            )
+
+            results = store.search([1.0, 0.0])
+
+            self.assertEqual([result["documentId"] for result in results], ["indexed"])
 
     def test_failed_vector_delete_keeps_document_and_retry_succeeds(self):
         with tempfile.TemporaryDirectory() as tmpdir:

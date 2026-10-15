@@ -82,6 +82,20 @@ class AgentHistoryTests(unittest.TestCase):
         self.assertEqual(run["errorSummary"], "The provider request failed.")
         self.assertNotIn("sensitive diagnostic", str(run))
 
+    def test_provider_value_error_is_sanitized(self):
+        with patch.object(
+            agent_routes.Agent,
+            "run_with_metadata",
+            side_effect=ValueError("provider failure with sensitive diagnostic"),
+        ):
+            response = self.client.post("/api/agent/run", json=self.request_payload())
+
+        self.assertEqual(response.status_code, 502)
+        self.assertNotIn("sensitive diagnostic", response.text)
+        run = self.client.get("/api/agent/runs").json()["runs"][0]
+        self.assertEqual(run["status"], "failed")
+        self.assertEqual(run["errorSummary"], "The provider request failed.")
+
     def test_unsupported_summary_memory_is_rejected_before_execution(self):
         payload = self.request_payload()
         payload["config"]["memory"] = "summary"

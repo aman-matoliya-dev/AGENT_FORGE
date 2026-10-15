@@ -111,15 +111,6 @@ def run_agent(
             "sources": knowledge_sources,
         }
 
-    except ValueError as error:
-        db.finish_run(
-            run_id,
-            success=False,
-            duration_ms=int((time.perf_counter() - started) * 1000),
-            error_type="request_error",
-        )
-        raise HTTPException(status_code=400, detail=str(error))
-
     except Exception:
         db.finish_run(
             run_id,

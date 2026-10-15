@@ -144,7 +144,7 @@ export default function Builder() {
 
     if (!provider) {
       setTestError(
-        'This provider is currently available for generated projects, but live testing currently supports Gemini only.'
+        'This provider is available for generated projects, but live testing currently supports Gemini and Ollama only.'
       );
       return;
     }
@@ -287,7 +287,7 @@ export default function Builder() {
                 {isApi
                   ? provider?.id === 'google'
                     ? ' This uses the Gemini backend currently connected to AGENT_FORGE.'
-                    : ' This provider is available for generated projects, but live testing currently supports Gemini only.'
+                    : ' This provider is available for generated projects, but live testing currently supports Gemini and Ollama only.'
                   : ' This uses your local Ollama backend.'}
               </p>
             </div>
