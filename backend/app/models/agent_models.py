@@ -36,8 +36,8 @@ class AgentConfig(BaseModel):
     @field_validator("memory")
     @classmethod
     def supported_memory(cls, value: str) -> str:
-        if value not in {"none", "buffer", "window", "summary"}:
-            raise ValueError("memory must be 'none' or 'buffer' (window/summary are legacy generated-project modes)")
+        if value not in {"none", "buffer", "window"}:
+            raise ValueError("memory must be 'none', 'buffer', or 'window'")
         return value
 
     @field_validator("knowledge")

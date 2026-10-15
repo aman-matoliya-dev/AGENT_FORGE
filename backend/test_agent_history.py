@@ -82,6 +82,17 @@ class AgentHistoryTests(unittest.TestCase):
         self.assertEqual(run["errorSummary"], "The provider request failed.")
         self.assertNotIn("sensitive diagnostic", str(run))
 
+    def test_unsupported_summary_memory_is_rejected_before_execution(self):
+        payload = self.request_payload()
+        payload["config"]["memory"] = "summary"
+
+        with patch.object(agent_routes.Agent, "run_with_metadata") as run:
+            response = self.client.post("/api/agent/run", json=payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("memory must be 'none', 'buffer', or 'window'", response.text)
+        run.assert_not_called()
+
     def test_list_pagination_validation_and_missing_run(self):
         for index in range(3):
             db.log_run("ollama", f"Agent {index}", 10, success=True, model="llama3.2:latest")

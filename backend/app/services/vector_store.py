@@ -1,8 +1,12 @@
 import json
+import tempfile
+from threading import Lock
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+_index_lock = Lock()
 
 
 class LocalVectorStore:
@@ -27,7 +31,24 @@ class LocalVectorStore:
             return {}
 
     def _write_index(self, index: dict[str, dict[str, Any]]) -> None:
-        self.index_path.write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self.root_dir,
+                delete=False,
+            ) as temporary_file:
+                temporary_path = Path(temporary_file.name)
+                temporary_file.write(json.dumps(index, ensure_ascii=False, indent=2))
+            temporary_path.replace(self.index_path)
+        except Exception:
+            if temporary_path is not None:
+                try:
+                    temporary_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
 
     def _document_meta_path(self, document_id: str) -> Path:
         return self.documents_dir / f"{document_id}.json"
@@ -42,11 +63,6 @@ class LocalVectorStore:
         if len(chunks) != len(embeddings):
             raise ValueError("Chunk count and embedding count do not match.")
 
-        index = self._load_index()
-        index[document_id] = metadata
-        self._write_index(index)
-        self._document_meta_path(document_id).write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
-
         vector_payload = []
         for chunk, embedding in zip(chunks, embeddings):
             vector_payload.append({
@@ -58,9 +74,31 @@ class LocalVectorStore:
                 "text": chunk["text"],
                 "embedding": embedding,
             })
-        self._vector_path(document_id).write_text(json.dumps(vector_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        artifacts = (
+            (self._document_meta_path(document_id), json.dumps(metadata, ensure_ascii=False, indent=2)),
+            (self._vector_path(document_id), json.dumps(vector_payload, ensure_ascii=False, indent=2)),
+            (self._chunk_path(document_id), json.dumps(chunks, ensure_ascii=False, indent=2)),
+        )
+        with _index_lock:
+            index = self._load_index()
+            if document_id in index or any(path.exists() for path, _ in artifacts):
+                raise FileExistsError(f"Knowledge document already exists: {document_id}")
 
-        self._chunk_path(document_id).write_text(json.dumps(chunks, ensure_ascii=False, indent=2), encoding="utf-8")
+            written_paths: list[Path] = []
+            try:
+                for path, content in artifacts:
+                    written_paths.append(path)
+                    path.write_text(content, encoding="utf-8")
+
+                index[document_id] = metadata
+                self._write_index(index)
+            except Exception:
+                for path in written_paths:
+                    try:
+                        path.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+                raise
 
     def list_documents(self) -> list[dict[str, Any]]:
         documents = []
@@ -83,6 +121,7 @@ class LocalVectorStore:
         if query_norm == 0:
             return []
 
+        indexed_document_ids = self._load_index()
         scored: list[dict[str, Any]] = []
         for path in sorted(self.vectors_dir.glob("*.json")):
             try:
@@ -90,6 +129,8 @@ class LocalVectorStore:
             except (TypeError, ValueError):
                 continue
             for item in payload:
+                if item.get("documentId") not in indexed_document_ids:
+                    continue
                 vec = np.asarray(item.get("embedding") or [], dtype=float)
                 if vec.size == 0:
                     continue
@@ -110,24 +151,25 @@ class LocalVectorStore:
         return scored[:max(1, top_k)]
 
     def delete_document(self, document_id: str) -> bool:
-        index = self._load_index()
-        if document_id not in index:
-            return False
-        del index[document_id]
-        self._write_index(index)
+        with _index_lock:
+            index = self._load_index()
+            if document_id not in index:
+                return False
+            del index[document_id]
+            self._write_index(index)
 
-        for path in (
-            self._document_meta_path(document_id),
-            self._vector_path(document_id),
-            self._chunk_path(document_id),
-        ):
-            if path.exists():
-                path.unlink()
+            for path in (
+                self._document_meta_path(document_id),
+                self._vector_path(document_id),
+                self._chunk_path(document_id),
+            ):
+                if path.exists():
+                    path.unlink()
 
-        for file_path in self.documents_dir.glob(f"{document_id}.*"):
-            if file_path.exists():
-                file_path.unlink()
-        return True
+            for file_path in self.documents_dir.glob(f"{document_id}.*"):
+                if file_path.exists():
+                    file_path.unlink()
+            return True
 
     def status(self) -> dict[str, Any]:
         import os

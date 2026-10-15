@@ -148,15 +148,11 @@ export interface ExecutionRunList {
 
 export async function listExecutionRuns(limit = 25, offset = 0): Promise<ExecutionRunList> {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-  const response = await fetch(`${API_BASE_URL}/api/agent/runs?${params}`);
-  if (!response.ok) throw await apiError(response, "Failed to load execution history.");
-  return response.json();
+  return requestJson<ExecutionRunList>(`/api/agent/runs?${params}`, "Failed to load execution history.");
 }
 
 export async function getExecutionRun(runId: number): Promise<ExecutionRun> {
-  const response = await fetch(`${API_BASE_URL}/api/agent/runs/${runId}`);
-  if (!response.ok) throw await apiError(response, "Failed to load execution details.");
-  const data: { success: boolean; run: ExecutionRun } = await response.json();
+  const data = await requestJson<{ success: boolean; run: ExecutionRun }>(`/api/agent/runs/${runId}`, "Failed to load execution details.");
   return data.run;
 }
 
@@ -198,47 +194,47 @@ async function apiError(response: Response, fallback: string): Promise<Error> {
   return new Error(fallback);
 }
 
+async function requestJson<T>(path: string, fallback: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  if (!response.ok) throw await apiError(response, fallback);
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+  return response.json() as Promise<T>;
+}
+
 export async function listSavedAgents(): Promise<SavedAgent[]> {
-  const response = await fetch(`${API_BASE_URL}/api/agents`);
-  if (!response.ok) throw await apiError(response, "Failed to load saved agents.");
-  const data: { success: boolean; agents: SavedAgent[] } = await response.json();
+  const data = await requestJson<{ success: boolean; agents: SavedAgent[] }>("/api/agents", "Failed to load saved agents.");
   return data.agents;
 }
 
 export async function getSavedAgent(agentId: string): Promise<SavedAgent> {
-  const response = await fetch(`${API_BASE_URL}/api/agents/${encodeURIComponent(agentId)}`);
-  if (!response.ok) throw await apiError(response, "Failed to load this agent.");
-  const data: { success: boolean; agent: SavedAgent } = await response.json();
+  const data = await requestJson<{ success: boolean; agent: SavedAgent }>(`/api/agents/${encodeURIComponent(agentId)}`, "Failed to load this agent.");
   return data.agent;
 }
 
 export async function createSavedAgent(agent: SavedAgentInput): Promise<SavedAgent> {
-  const response = await fetch(`${API_BASE_URL}/api/agents`, {
+  const data = await requestJson<{ success: boolean; agent: SavedAgent }>("/api/agents", "Failed to save agent.", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(agent),
   });
-  if (!response.ok) throw await apiError(response, "Failed to save agent.");
-  const data: { success: boolean; agent: SavedAgent } = await response.json();
   return data.agent;
 }
 
 export async function updateSavedAgent(agentId: string, changes: SavedAgentUpdate): Promise<SavedAgent> {
-  const response = await fetch(`${API_BASE_URL}/api/agents/${encodeURIComponent(agentId)}`, {
+  const data = await requestJson<{ success: boolean; agent: SavedAgent }>(`/api/agents/${encodeURIComponent(agentId)}`, "Failed to update agent.", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(changes),
   });
-  if (!response.ok) throw await apiError(response, "Failed to update agent.");
-  const data: { success: boolean; agent: SavedAgent } = await response.json();
   return data.agent;
 }
 
 export async function deleteSavedAgent(agentId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/agents/${encodeURIComponent(agentId)}`, {
+  await requestJson<void>(`/api/agents/${encodeURIComponent(agentId)}`, "Failed to delete agent.", {
     method: "DELETE",
   });
-  if (!response.ok) throw await apiError(response, "Failed to delete agent.");
 }
 
 export interface KnowledgeDocument {
@@ -264,17 +260,14 @@ export async function uploadKnowledgeDocument(file: File) {
   const formData = new FormData();
   formData.append('file', file, file.name);
 
-  const response = await fetch(`${API_BASE_URL}/api/knowledge/upload`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.detail || 'Knowledge upload failed');
-  }
-
-  return response.json();
+  return requestJson<{ success: boolean; document: { documentId: string; filename: string; fileType: string; size: number; chunkCount: number; status: string } }>(
+    '/api/knowledge/upload',
+    'Knowledge upload failed',
+    {
+      method: 'POST',
+      body: formData,
+    },
+  );
 }
 
 export async function listKnowledgeDocuments(): Promise<{ success: boolean; documents: KnowledgeDocument[] }> {
@@ -286,31 +279,25 @@ export async function listKnowledgeDocuments(): Promise<{ success: boolean; docu
 }
 
 export async function searchKnowledge(query: string, topK = 5): Promise<{ success: boolean; query: string; results: KnowledgeSearchResult[] }> {
-  const response = await fetch(`${API_BASE_URL}/api/knowledge/search`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, topK }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.detail || 'Knowledge search failed');
-  }
-
-  return response.json();
+  return requestJson<{ success: boolean; query: string; results: KnowledgeSearchResult[] }>(
+    '/api/knowledge/search',
+    'Knowledge search failed',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, topK }),
+    },
+  );
 }
 
 export async function deleteKnowledgeDocument(documentId: string) {
-  const response = await fetch(`${API_BASE_URL}/api/knowledge/documents/${documentId}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.detail || 'Knowledge document deletion failed');
-  }
-
-  return response.json();
+  return requestJson<{ success: boolean; documentId: string; deleted: boolean }>(
+    `/api/knowledge/documents/${documentId}`,
+    'Knowledge document deletion failed',
+    {
+      method: 'DELETE',
+    },
+  );
 }
 
 export async function getKnowledgeStatus(): Promise<{ success: boolean; documents: number; chunks: number; vectorStore: string; embeddingConfigured: boolean }> {
@@ -324,21 +311,11 @@ export async function getKnowledgeStatus(): Promise<{ success: boolean; document
 export async function runAgent(
   request: AgentRequest
 ): Promise<AgentResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/agent/run`, {
+  return requestJson<AgentResponse>("/api/agent/run", "Agent request failed", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(request),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-
-    throw new Error(
-      errorData?.detail || "Agent request failed"
-    );
-  }
-
-  return response.json();
 }

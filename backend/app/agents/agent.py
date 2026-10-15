@@ -59,6 +59,11 @@ Be helpful and accurate. Never claim an unavailable tool, memory, or knowledge s
 Runtime tool status:
 {tool_status}
 
+When the runtime tool status contains a calculator result, use that exact result
+as the authoritative answer for the calculation. Do not recalculate it or
+contradict it. Explain the calculation briefly if appropriate. If the calculator
+was not invoked, do not claim that it was used.
+
 User:
 {user_message}""".strip()
         if knowledge_context:
