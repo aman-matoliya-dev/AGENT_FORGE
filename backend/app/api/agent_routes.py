@@ -2,7 +2,7 @@ import logging
 import uuid
 import time
 
-from fastapi import APIRouter, HTTPException, Response, Cookie, Path, Query
+from fastapi import APIRouter, HTTPException, Path, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.agents.agent import Agent
@@ -26,18 +26,13 @@ class AgentRequest(BaseModel):
 @router.post("/run")
 def run_agent(
     request: AgentRequest,
-    response: Response,
-    session_id: str | None = Cookie(default=None),
+    http_request: Request,
 ):
-    if not session_id:
-        session_id = str(uuid.uuid4())
-        response.set_cookie(
-            "session_id", session_id, httponly=True, samesite="lax", max_age=60 * 60 * 24
-        )
-
     conversation_id = request.conversation_id or str(uuid.uuid4())
     if request.config.provider == "gemini":
-        allowed, remaining = rate_limit.is_allowed(session_id)
+        if http_request.client is None:
+            raise HTTPException(status_code=503, detail="Client identity is unavailable.")
+        allowed, _remaining = rate_limit.is_allowed(http_request.client.host)
         if not allowed:
             db.log_run(
                 "gemini",
