@@ -1,11 +1,13 @@
+
 from contextlib import asynccontextmanager
 import os
 from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-load_dotenv()  # reads backend/.env into environment variables, before anything needs GEMINI_API_KEY
 
-from fastapi import FastAPI, Request
+load_dotenv()
+
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -13,6 +15,8 @@ from fastapi.responses import JSONResponse
 from app.api.agent_routes import router as agent_router
 from app.api.knowledge_routes import router as knowledge_router
 from app.api.saved_agents_routes import router as saved_agents_router
+from app.api.auth_routes import router as auth_router
+from app.services.auth import require_authenticated_request
 from app.services import db
 
 DEVELOPMENT_CORS_ORIGINS = [
@@ -46,6 +50,7 @@ def _configured_cors_origins() -> list[str]:
             raise RuntimeError(
                 "CORS_ORIGINS entries must be specific HTTP or HTTPS origins."
             ) from error
+
         if (
             parsed.scheme not in {"http", "https"}
             or not parsed.hostname
@@ -77,6 +82,22 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def validate_request_origin(request: Request, call_next):
+    if request.method in {"POST", "PATCH", "PUT", "DELETE"}:
+        origin = request.headers.get("origin")
+        allowed_origins = _configured_cors_origins()
+
+        if origin not in allowed_origins:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Untrusted request origin."},
+            )
+
+    return await call_next(request)
+
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
@@ -98,29 +119,35 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_configured_cors_origins(),
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Content-Type"],
 )
 
 
-app.include_router(agent_router)
-app.include_router(knowledge_router)
-app.include_router(saved_agents_router)
+app.include_router(
+    agent_router,
+    dependencies=[Depends(require_authenticated_request)],
+)
+app.include_router(
+    knowledge_router,
+    dependencies=[Depends(require_authenticated_request)],
+)
+app.include_router(
+    saved_agents_router,
+    dependencies=[Depends(require_authenticated_request)],
+)
+app.include_router(auth_router)
 
 
 @app.get("/")
 def root():
-    return {
-        "message": "AGENT_FORGE Python backend is running!"
-    }
+    return {"message": "AGENT_FORGE Python backend is running!"}
 
 
 @app.get("/health")
 def health_check():
-    return {
-        "status": "healthy"
-    }
+    return {"status": "healthy"}
 
 
 @app.get("/api/test")
@@ -129,5 +156,5 @@ def test_api():
         "success": True,
         "message": "React can communicate with Python!",
         "backend": "FastAPI",
-        "language": "Python"
+        "language": "Python",
     }
