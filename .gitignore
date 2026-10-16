@@ -39,3 +39,4 @@ backend/backend_structure.txt
 .agents/
 skills-lock.json
 scripts/gen-ppt.mjs
+.github/modernize/
