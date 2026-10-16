@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import os
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 load_dotenv()  # reads backend/.env into environment variables, before anything needs GEMINI_API_KEY
@@ -12,6 +14,53 @@ from app.api.agent_routes import router as agent_router
 from app.api.knowledge_routes import router as knowledge_router
 from app.api.saved_agents_routes import router as saved_agents_router
 from app.services import db
+
+DEVELOPMENT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+]
+
+
+def _configured_cors_origins() -> list[str]:
+    environment = os.getenv("APP_ENV", "development").strip().lower()
+    if environment not in {"development", "production"}:
+        raise RuntimeError("APP_ENV must be 'development' or 'production'.")
+
+    configured = os.getenv("CORS_ORIGINS")
+    if configured is None:
+        if environment == "production":
+            raise RuntimeError("CORS_ORIGINS must be configured in production.")
+        return DEVELOPMENT_CORS_ORIGINS
+
+    origins = [origin.strip().rstrip("/") for origin in configured.split(",")]
+    if not origins or any(not origin for origin in origins):
+        raise RuntimeError("CORS_ORIGINS must contain one or more valid origins.")
+
+    for origin in origins:
+        try:
+            parsed = urlsplit(origin)
+            parsed.port
+        except ValueError as error:
+            raise RuntimeError(
+                "CORS_ORIGINS entries must be specific HTTP or HTTPS origins."
+            ) from error
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path
+            or parsed.query
+            or parsed.fragment
+            or "*" in origin
+        ):
+            raise RuntimeError(
+                "CORS_ORIGINS entries must be specific HTTP or HTTPS origins."
+            )
+
+    return list(dict.fromkeys(origins))
 
 
 @asynccontextmanager
@@ -48,15 +97,10 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_configured_cors_origins(),
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Content-Type"],
 )
 
 

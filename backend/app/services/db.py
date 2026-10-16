@@ -74,6 +74,20 @@ def init_db() -> None:
                 updated_at TEXT NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS gemini_rate_limit_events (
+                client_ip TEXT NOT NULL,
+                created_at REAL NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_gemini_rate_limit_client_created
+            ON gemini_rate_limit_events (client_ip, created_at)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_gemini_rate_limit_created
+            ON gemini_rate_limit_events (created_at)
+        """)
 
 
 def start_run(

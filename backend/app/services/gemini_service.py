@@ -20,7 +20,11 @@ def _get_client() -> genai.Client:
     return _client
 
 
-def ask_gemini(message: str, model: str | None = None) -> str:
+def ask_gemini(
+    message: str,
+    model: str | None = None,
+    system_instruction: str | None = None,
+) -> str:
     client = _get_client()
     selected_model = model or MODEL
     print(f"[GEMINI] calling model={selected_model}")
@@ -36,6 +40,7 @@ def ask_gemini(message: str, model: str | None = None) -> str:
         config=types.GenerateContentConfig(
             max_output_tokens=400,
             temperature=0.7,
+            system_instruction=system_instruction,
         ),
     )
 
