@@ -24,7 +24,7 @@ A full-stack platform that teaches beginners how AI agents work and lets them bu
 - **Document knowledge (RAG)** – Upload `.txt` / `.pdf` files (10 MB limit), which are parsed, chunked with overlap, embedded with Gemini, and stored in a local vector store. Agents retrieve relevant chunks by cosine similarity and return **source citations** (file, page, score).
 - **Saved agents (CRUD)** – Create, list, update (PATCH), and delete agent configurations, persisted in SQLite.
 - **Execution history & analytics** – Every run is logged with provider, model, duration, success/error type, and tools used, with paginated history and aggregate stats.
-- **Demo rate limiting** – Per-session limit on Gemini requests (8 per 30 minutes) using an `httponly` session cookie.
+- **Demo rate limiting** – Eight Gemini requests per server-observed client IP in a sliding 30-minute window, recorded atomically in the existing SQLite database.
 - **Learning content** – 10 interactive lessons, a hardware advisor that recommends local models for a device's RAM/VRAM/storage, a local-vs-API comparison, and a curated resources page.
 - **Dark / light theme** – Dark-first UI with a full light theme and animated explainers (see [`DESIGN.md`](./DESIGN.md)).
 
@@ -74,8 +74,8 @@ flowchart TD
 **How it flows:**
 
 1. The React app calls the FastAPI backend (CORS is enabled for the Vite dev server on ports 5173/5174).
-2. `POST /api/agent/run` validates the request body against `AgentConfig`, applies the Gemini rate limit, and creates a run record in SQLite.
-3. The `Agent` builds a provider-neutral prompt from the agent's purpose, personality, and output style, plus tool results, conversation history, and retrieved knowledge.
+2. `POST /api/agent/run` validates the request body against `AgentConfig`, applies the Gemini rate limit using the connection's client IP, and creates a run record in SQLite.
+3. The `Agent` sends fixed application policy as a provider system instruction and places agent settings, conversation history, user input, tool status, and retrieved knowledge in the user content.
 4. If RAG is enabled, the question is embedded and matched against the local vector store. Only chunks above a relevance threshold are added to the prompt, and their sources are returned in the response.
 5. The prompt is sent to Gemini or Ollama, the exchange is appended to memory, and the run's duration, tools used, and outcome are written back to SQLite.
 6. Errors are mapped to clear HTTP statuses (`400` invalid request, `429` rate limited, `502` provider unavailable).
@@ -225,6 +225,8 @@ npm install
 npm run dev
 ```
 
+For a production build, set `VITE_API_BASE_URL` to the backend's absolute HTTP(S) URL. Production builds fail if this value is missing or malformed; the localhost default is development-only. Configure the backend with `APP_ENV=production` and `CORS_ORIGINS` as a comma-separated list of exact frontend origins. Production does not fall back to development CORS origins.
+
 ### 5. Access the application
 
 | View          | URL                            |
@@ -245,15 +247,17 @@ Then choose **Ollama** as the provider when building an agent.
 
 ```bash
 cd backend
-python -m unittest test_agent_history test_knowledge test_phase2 test_phase3b test_saved_agents
+python -m unittest discover -p "test*.py"
 ```
 
 ---
 
 ## 📓 Notes
 
-- The frontend calls `http://127.0.0.1:8000` by default. For a deployed build, set `VITE_API_BASE_URL` at build time.
-- SQLite data lives in `backend/agent_forge.db`, and the knowledge store lives in `backend/data/knowledge/`. Both are git-ignored.
+- The frontend calls `http://127.0.0.1:8000` only in development. Set `VITE_API_BASE_URL` at production build time.
+- SQLite data lives in `backend/agent_forge.db`, and the knowledge store lives in `backend/data/knowledge/`. Both are git-ignored. Gemini quota events retain client IPs until expired events are pruned by a later Gemini request.
+- The Gemini demo quota is per observed client IP. It does not authenticate users and can be bypassed by distributed clients or changing networks. Multiple workers must use the same SQLite file; multi-host deployments need a shared rate-limit service.
+- Retrieved text and profile settings are sent as provider user content, separate from fixed system instructions. This reduces direct instruction override but does not eliminate prompt injection.
 - Conversation memory is held in process memory, so it resets when the server restarts.
 - Only Gemini (`gemini-3.6-flash`) and Ollama are supported providers. Notes, web search, and persistent memory are not implemented yet and are reported as unavailable rather than faked.
 - Knowledge retrieval supports text-based PDFs and `.txt` files; OCR for scanned PDFs is not implemented.
