@@ -59,11 +59,37 @@
 
 
 
-// In production this MUST be set via VITE_API_BASE_URL at build time, pointing to
-// the deployed backend. Without it, a production build silently falls back to
-// localhost:8000 and every real visitor's browser tries (and fails) to reach
-// their OWN machine instead of your server.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+function getApiBaseUrl(): string {
+  if (!configuredApiBaseUrl) {
+    if (import.meta.env.PROD) {
+      throw new Error("VITE_API_BASE_URL must be set for production builds.");
+    }
+    return "http://127.0.0.1:8000";
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(configuredApiBaseUrl);
+  } catch {
+    throw new Error("VITE_API_BASE_URL must be an absolute HTTP or HTTPS URL.");
+  }
+
+  if (
+    !["http:", "https:"].includes(parsedUrl.protocol) ||
+    parsedUrl.username ||
+    parsedUrl.password ||
+    parsedUrl.search ||
+    parsedUrl.hash
+  ) {
+    throw new Error("VITE_API_BASE_URL must be an absolute HTTP or HTTPS URL.");
+  }
+
+  return configuredApiBaseUrl.replace(/\/+$/, "");
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export async function testBackend() {
   const response = await fetch(`${API_BASE_URL}/api/test`);

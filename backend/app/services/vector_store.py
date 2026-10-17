@@ -1,5 +1,6 @@
 import json
 import tempfile
+import uuid
 from threading import RLock
 from pathlib import Path
 from typing import Any
@@ -120,6 +121,118 @@ class LocalVectorStore:
     def get_document(self, document_id: str) -> dict[str, Any] | None:
         index = self._load_index()
         return index.get(document_id)
+
+    def assign_legacy_owner(self, owner_id: str) -> int:
+        try:
+            normalized_owner_id = str(uuid.UUID(owner_id))
+        except (AttributeError, ValueError) as error:
+            raise ValueError("A valid owner ID is required.") from error
+
+        with _index_lock:
+            index = self._load_index()
+            updated_index = {key: dict(value) for key, value in index.items()}
+            metadata_updates: dict[Path, dict[str, Any]] = {}
+            index_changed = False
+            updated_count = 0
+
+            for document_id, indexed_metadata in updated_index.items():
+                metadata_path = self._document_meta_path(document_id)
+                if not metadata_path.is_file():
+                    raise KnowledgeIndexError(
+                        "A legacy knowledge document is missing its metadata file."
+                    )
+                try:
+                    file_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as error:
+                    raise KnowledgeIndexError(
+                        "A legacy knowledge document has unreadable metadata."
+                    ) from error
+                if not isinstance(file_metadata, dict):
+                    raise KnowledgeIndexError(
+                        "A legacy knowledge document has invalid metadata."
+                    )
+
+                indexed_owner = indexed_metadata.get("ownerId")
+                file_owner = file_metadata.get("ownerId")
+                if indexed_owner and file_owner and indexed_owner != file_owner:
+                    raise KnowledgeIndexError(
+                        "Legacy knowledge ownership metadata is inconsistent."
+                    )
+                existing_owner = indexed_owner or file_owner
+                if existing_owner:
+                    if indexed_owner is None:
+                        indexed_metadata["ownerId"] = existing_owner
+                        index_changed = True
+                    file_changed = False
+                    if file_owner is None:
+                        file_metadata["ownerId"] = existing_owner
+                        file_changed = True
+                    if file_changed:
+                        metadata_updates[metadata_path] = file_metadata
+                    if file_changed or indexed_owner is None:
+                        updated_count += 1
+                    continue
+                else:
+                    indexed_metadata["ownerId"] = normalized_owner_id
+                    file_metadata["ownerId"] = normalized_owner_id
+                    metadata_updates[metadata_path] = file_metadata
+                    index_changed = True
+                    updated_count += 1
+
+            if not metadata_updates and not index_changed:
+                return 0
+
+            paths = ([self.index_path] if index_changed else []) + list(metadata_updates)
+            originals = {
+                path: path.read_bytes() if path.exists() else None
+                for path in paths
+            }
+            try:
+                for path, metadata in metadata_updates.items():
+                    self._write_json_file(path, metadata)
+                if index_changed:
+                    self._write_index(updated_index)
+            except Exception as error:
+                rollback_failures = []
+                for path, original in originals.items():
+                    try:
+                        if original is None:
+                            path.unlink(missing_ok=True)
+                        else:
+                            self._write_bytes_atomically(path, original)
+                    except OSError as rollback_error:
+                        rollback_failures.append(rollback_error)
+                if rollback_failures:
+                    raise KnowledgeIndexError(
+                        "Knowledge ownership migration failed and rollback was incomplete."
+                    ) from error
+                raise
+            return updated_count
+
+    def _write_json_file(self, path: Path, payload: dict[str, Any]) -> None:
+        self._write_bytes_atomically(
+            path,
+            json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
+        )
+
+    def _write_bytes_atomically(self, path: Path, content: bytes) -> None:
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                dir=path.parent,
+                delete=False,
+            ) as temporary_file:
+                temporary_path = Path(temporary_file.name)
+                temporary_file.write(content)
+            temporary_path.replace(path)
+        except Exception:
+            if temporary_path is not None:
+                try:
+                    temporary_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
 
     def search(self, query_embedding: list[float], top_k: int = 5) -> list[dict[str, Any]]:
         if not query_embedding:
