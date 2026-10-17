@@ -1,6 +1,4 @@
-import sqlite3
 import time
-from contextlib import closing
 
 from app.services import db
 
@@ -16,26 +14,28 @@ def is_allowed(client_ip: str, now: float | None = None) -> tuple[bool, int]:
     current_time = time.time() if now is None else now
     cutoff = current_time - WINDOW_SECONDS
 
-    with closing(sqlite3.connect(db.DB_PATH, timeout=30)) as connection:
-        with connection:
-            connection.execute("PRAGMA busy_timeout = 30000")
-            connection.execute("BEGIN IMMEDIATE")
+    with db._connect() as connection:
+        if db.get_database_dialect() == "postgresql":
             connection.execute(
-                "DELETE FROM gemini_rate_limit_events WHERE created_at <= ?",
-                (cutoff,),
-            )
-            count = connection.execute(
-                "SELECT COUNT(*) FROM gemini_rate_limit_events "
-                "WHERE client_ip = ? AND created_at > ?",
-                (client_ip, cutoff),
-            ).fetchone()[0]
+                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
+                (client_ip,),
+            ).fetchone()
+        connection.execute(
+            "DELETE FROM gemini_rate_limit_events WHERE created_at <= ?",
+            (cutoff,),
+        )
+        count = connection.execute(
+            "SELECT COUNT(*) AS count FROM gemini_rate_limit_events "
+            "WHERE client_ip = ? AND created_at > ?",
+            (client_ip, cutoff),
+        ).fetchone()["count"]
 
-            if count >= MAX_REQUESTS_PER_WINDOW:
-                return False, 0
+        if count >= MAX_REQUESTS_PER_WINDOW:
+            return False, 0
 
-            connection.execute(
-                "INSERT INTO gemini_rate_limit_events (client_ip, created_at) "
-                "VALUES (?, ?)",
-                (client_ip, current_time),
-            )
-            return True, MAX_REQUESTS_PER_WINDOW - count - 1
+        connection.execute(
+            "INSERT INTO gemini_rate_limit_events (client_ip, created_at) "
+            "VALUES (?, ?)",
+            (client_ip, current_time),
+        )
+        return True, MAX_REQUESTS_PER_WINDOW - count - 1

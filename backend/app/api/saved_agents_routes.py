@@ -1,8 +1,8 @@
-import sqlite3
 import uuid
 
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.models.agent_models import AgentConfig, SavedAgentCreate, SavedAgentPatch
 from app.services import db
@@ -24,7 +24,7 @@ def create_agent(payload: SavedAgentCreate):
             payload.description,
             config.model_dump(by_alias=True),
         )
-    except sqlite3.Error as error:
+    except SQLAlchemyError as error:
         raise _storage_error() from error
     return {"success": True, "agent": saved}
 
@@ -33,7 +33,7 @@ def create_agent(payload: SavedAgentCreate):
 def list_agents():
     try:
         return {"success": True, "agents": db.list_saved_agents()}
-    except (sqlite3.Error, ValueError) as error:
+    except (SQLAlchemyError, ValueError) as error:
         raise _storage_error() from error
 
 
@@ -41,7 +41,7 @@ def list_agents():
 def get_agent(agent_id: str):
     try:
         saved = db.get_saved_agent(agent_id)
-    except (sqlite3.Error, ValueError) as error:
+    except (SQLAlchemyError, ValueError) as error:
         raise _storage_error() from error
     if saved is None:
         raise HTTPException(status_code=404, detail="Agent not found.")
@@ -71,7 +71,7 @@ def update_agent(agent_id: str, payload: SavedAgentPatch):
         )
     except HTTPException:
         raise
-    except (sqlite3.Error, ValueError, ValidationError) as error:
+    except (SQLAlchemyError, ValueError, ValidationError) as error:
         if isinstance(error, ValidationError):
             raise HTTPException(status_code=400, detail="Invalid agent configuration.") from error
         raise _storage_error() from error
@@ -85,7 +85,7 @@ def update_agent(agent_id: str, payload: SavedAgentPatch):
 def delete_agent(agent_id: str):
     try:
         deleted = db.delete_saved_agent(agent_id)
-    except sqlite3.Error as error:
+    except SQLAlchemyError as error:
         raise _storage_error() from error
     if not deleted:
         raise HTTPException(status_code=404, detail="Agent not found.")

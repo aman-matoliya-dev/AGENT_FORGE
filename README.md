@@ -22,9 +22,9 @@ A full-stack platform that teaches beginners how AI agents work and lets them bu
 - **Safe tool execution** – A small tool registry with a `calculator` (AST-based arithmetic evaluator, no `eval`) and a `datetime` tool. Tools that aren't implemented are explicitly reported as unavailable instead of being simulated.
 - **Conversation memory** – Provider-neutral, per-conversation history, bounded to the last 20 messages and switchable per agent (`none` / `buffer`).
 - **Document knowledge (RAG)** – Upload `.txt` / `.pdf` files (10 MB limit), which are parsed, chunked with overlap, embedded with Gemini, and stored in a local vector store. Agents retrieve relevant chunks by cosine similarity and return **source citations** (file, page, score).
-- **Saved agents (CRUD)** – Create, list, update (PATCH), and delete agent configurations, persisted in SQLite.
+- **Saved agents (CRUD)** – Create, list, update (PATCH), and delete agent configurations, persisted in SQLite for local development or PostgreSQL for team deployment.
 - **Execution history & analytics** – Every run is logged with provider, model, duration, success/error type, and tools used, with paginated history and aggregate stats.
-- **Demo rate limiting** – Eight Gemini requests per server-observed client IP in a sliding 30-minute window, recorded atomically in the existing SQLite database.
+- **Demo rate limiting** – Eight Gemini requests per server-observed client IP in a sliding 30-minute window, recorded atomically in the configured relational database.
 - **Learning content** – 10 interactive lessons, a hardware advisor that recommends local models for a device's RAM/VRAM/storage, a local-vs-API comparison, and a curated resources page.
 - **Dark / light theme** – Dark-first UI with a full light theme and animated explainers (see [`DESIGN.md`](./DESIGN.md)).
 
@@ -43,7 +43,7 @@ flowchart TD
     Parser[PDF / TXT Parser + Chunker]
     Embed[Embedding Service]
     Vectors[(Local Vector Store<br/>JSON files)]
-    DB[(SQLite<br/>agent_forge.db)]
+    DB[(Relational DB<br/>SQLite local / PostgreSQL team)]
     Gemini[Google Gemini API]
     Ollama[Ollama - local models]
 
@@ -74,10 +74,10 @@ flowchart TD
 **How it flows:**
 
 1. The React app calls the FastAPI backend (CORS is enabled for the Vite dev server on ports 5173/5174).
-2. `POST /api/agent/run` validates the request body against `AgentConfig`, applies the Gemini rate limit using the connection's client IP, and creates a run record in SQLite.
+2. `POST /api/agent/run` validates the request body against `AgentConfig`, applies the Gemini rate limit using the connection's client IP, and creates a run record in the configured relational database.
 3. The `Agent` sends fixed application policy as a provider system instruction and places agent settings, conversation history, user input, tool status, and retrieved knowledge in the user content.
 4. If RAG is enabled, the question is embedded and matched against the local vector store. Only chunks above a relevance threshold are added to the prompt, and their sources are returned in the response.
-5. The prompt is sent to Gemini or Ollama, the exchange is appended to memory, and the run's duration, tools used, and outcome are written back to SQLite.
+5. The prompt is sent to Gemini or Ollama, the exchange is appended to memory, and the run's duration, tools used, and outcome are written back to the configured relational database.
 6. Errors are mapped to clear HTTP statuses (`400` invalid request, `429` rate limited, `502` provider unavailable).
 
 ---
@@ -88,7 +88,7 @@ flowchart TD
 |----------------------|--------------------------------------------------|
 | Backend framework    | FastAPI + Uvicorn                               |
 | Validation           | Pydantic v2                                     |
-| Database             | SQLite (runs, tool logs, saved agents)          |
+| Database             | SQLAlchemy with SQLite locally and PostgreSQL for team deployment |
 | LLM providers        | Google Gemini (`google-genai`), Ollama (local)  |
 | Embeddings           | Gemini `gemini-embedding-001`                   |
 | Vector search        | NumPy cosine similarity over a local JSON store |
@@ -255,8 +255,8 @@ python -m unittest discover -p "test*.py"
 ## 📓 Notes
 
 - The frontend calls `http://127.0.0.1:8000` only in development. Set `VITE_API_BASE_URL` at production build time.
-- SQLite data lives in `backend/agent_forge.db`, and the knowledge store lives in `backend/data/knowledge/`. Both are git-ignored. Gemini quota events retain client IPs until expired events are pruned by a later Gemini request.
-- The Gemini demo quota is per observed client IP. It does not authenticate users and can be bypassed by distributed clients or changing networks. Multiple workers must use the same SQLite file; multi-host deployments need a shared rate-limit service.
+- Local SQLite data lives in `backend/agent_forge.db`; team deployments can use PostgreSQL via `DATABASE_URL`. The knowledge store remains in `backend/data/knowledge/`. Local data directories are git-ignored. Gemini quota events retain client IPs until expired events are pruned by a later Gemini request.
+- The Gemini demo quota is per observed client IP. It does not authenticate users and can be bypassed by distributed clients or changing networks. SQLite workers must use the same database file; PostgreSQL workers coordinate quota updates through the shared database.
 - Retrieved text and profile settings are sent as provider user content, separate from fixed system instructions. This reduces direct instruction override but does not eliminate prompt injection.
 - Conversation memory is held in process memory, so it resets when the server restarts.
 - Only Gemini (`gemini-3.6-flash`) and Ollama are supported providers. Notes, web search, and persistent memory are not implemented yet and are reported as unavailable rather than faked.

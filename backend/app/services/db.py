@@ -1,93 +1,35 @@
 import json
-import sqlite3
+from collections.abc import Mapping
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
+
+from app.services import database, migrations
 
 DB_PATH = Path(__file__).resolve().parent.parent.parent / "agent_forge.db"
 
 
+def get_database_url() -> str:
+    return database.configured_database_url(DB_PATH)
+
+
+def get_database_dialect() -> str:
+    return database.engine_for(get_database_url()).dialect.name
+
+
 @contextmanager
 def _connect():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-        conn.commit()
-    finally:
-        conn.close()
+    with database.transaction(get_database_url()) as connection:
+        yield database.DatabaseConnection(connection)
 
 
 def init_db() -> None:
-    with _connect() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS agent_runs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                created_at TEXT NOT NULL,
-                provider TEXT NOT NULL,
-                agent_name TEXT NOT NULL,
-                message_length INTEGER NOT NULL,
-                success INTEGER NOT NULL,
-                error_type TEXT,
-                model TEXT,
-                completed_at TEXT,
-                duration_ms INTEGER,
-                result_summary TEXT,
-                tools_json TEXT
-            )
-        """)
-        columns = {
-            row["name"] for row in conn.execute("PRAGMA table_info(agent_runs)").fetchall()
-        }
-        migrate_legacy_runs = "completed_at" not in columns
-        additions = {
-            "model": "TEXT",
-            "completed_at": "TEXT",
-            "duration_ms": "INTEGER",
-            "result_summary": "TEXT",
-            "tools_json": "TEXT",
-        }
-        for column, column_type in additions.items():
-            if column not in columns:
-                conn.execute(f"ALTER TABLE agent_runs ADD COLUMN {column} {column_type}")
-        if migrate_legacy_runs:
-            conn.execute(
-                "UPDATE agent_runs SET completed_at = created_at WHERE completed_at IS NULL"
-            )
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS tool_runs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                created_at TEXT NOT NULL,
-                conversation_id TEXT,
-                tool_name TEXT NOT NULL,
-                status TEXT NOT NULL,
-                detail TEXT
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS saved_agents (
-                agent_id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                description TEXT NOT NULL,
-                config_json TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS gemini_rate_limit_events (
-                client_ip TEXT NOT NULL,
-                created_at REAL NOT NULL
-            )
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_gemini_rate_limit_client_created
-            ON gemini_rate_limit_events (client_ip, created_at)
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_gemini_rate_limit_created
-            ON gemini_rate_limit_events (created_at)
-        """)
+    migrations.upgrade_schema(get_database_url())
+
+
+def require_current_schema() -> None:
+    migrations.require_current_schema(get_database_url())
 
 
 def start_run(
@@ -98,13 +40,13 @@ def start_run(
 ) -> int:
     created_at = datetime.now(timezone.utc).isoformat()
     with _connect() as conn:
-        cursor = conn.execute(
+        row = conn.execute(
             "INSERT INTO agent_runs "
             "(created_at, provider, agent_name, message_length, success, error_type, model) "
-            "VALUES (?, ?, ?, ?, 0, NULL, ?)",
+            "VALUES (?, ?, ?, ?, 0, NULL, ?) RETURNING id",
             (created_at, provider, agent_name, message_length, model),
-        )
-        return int(cursor.lastrowid)
+        ).fetchone()
+        return int(row["id"])
 
 
 def finish_run(
@@ -149,7 +91,7 @@ def log_run(
     )
 
 
-def _run_from_row(row: sqlite3.Row) -> dict:
+def _run_from_row(row: Mapping[str, Any]) -> dict:
     status = "running" if row["completed_at"] is None else ("succeeded" if row["success"] else "failed")
     return {
         "runId": row["id"],
@@ -218,7 +160,7 @@ def log_tool(conversation_id: str | None, tool_name: str, status: str, detail: s
         )
 
 
-def _saved_agent_from_row(row: sqlite3.Row) -> dict:
+def _saved_agent_from_row(row: Mapping[str, Any]) -> dict:
     config = json.loads(row["config_json"])
     return {
         "id": row["agent_id"],

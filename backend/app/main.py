@@ -65,7 +65,10 @@ def _configured_cors_origins() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    db.init_db()
+    if os.getenv("APP_ENV", "development").strip().lower() == "production":
+        db.require_current_schema()
+    else:
+        db.init_db()
     yield
 
 

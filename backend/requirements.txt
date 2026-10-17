@@ -17,3 +17,6 @@ numpy==2.5.3
 pypdf==6.19.0
 python-dotenv==1.0.1
 requests==2.34.2
+SQLAlchemy==2.0.54
+psycopg[binary]==3.3.6
+argon2-cffi==25.1.0
